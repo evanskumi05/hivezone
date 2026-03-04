@@ -1,14 +1,91 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
+import { createClient } from "@/utils/supabase/client";
 
 const SignInPage = () => {
+    const router = useRouter();
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (error) {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+    }, [error]);
+
+    const handleKeyDown = (e, callback) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            callback(e);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError(null);
+
+        if (!identifier || !password) {
+            setError("Please fill in all fields.");
+            return;
+        }
+
+        setLoading(true);
+        const supabase = createClient();
+
+        // Check if identifier is an email. If not, we might need to look up the email by username
+        // For simplicity in V1, Supabase native Auth requires email.
+        let emailToLogin = identifier;
+
+        if (!identifier.includes('@')) {
+            // It's a username. We need to find the email.
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('email')
+                .ilike('username', identifier)
+                .single();
+
+            if (userError || !userData) {
+                setError("Invalid username or password.");
+                setLoading(false);
+                return;
+            }
+            emailToLogin = userData.email;
+        }
+
+        const { error: authError } = await supabase.auth.signInWithPassword({
+            email: emailToLogin,
+            password,
+        });
+
+        if (authError) {
+            setError(authError.message);
+            setLoading(false);
+            return;
+        }
+
+        // Check if the user is onboarded to decide where to route them
+        const { data: userRecord } = await supabase
+            .from('users')
+            .select('is_onboarded')
+            .eq('email', emailToLogin)
+            .single();
+
+        setLoading(false);
+        if (userRecord && !userRecord.is_onboarded) {
+            router.push("/auth/onboarding");
+        } else {
+            // Route to the dashboard or home page
+            router.push("/dashboard");
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#f1f1f1] text-zinc-900 font-sans flex flex-col items-center">
@@ -52,15 +129,21 @@ const SignInPage = () => {
                 </div>
 
                 {/* Form Card */}
-                <div className="w-full border-2 border-[#ffc107]/40 rounded-3xl p-6 sm:p-8 space-y-6">
+                <form onSubmit={handleSubmit} className="w-full border-2 border-[#ffc107]/40 rounded-3xl p-6 sm:p-8 space-y-6">
+                    {error && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm" role="alert">
+                            <span className="block sm:inline">{error}</span>
+                        </div>
+                    )}
                     {/* Identifier */}
                     <div>
-                        <label className="block text-xs sm:text-sm font-semibold mb-2 text-zinc-800">Email Or Public Display Name</label>
+                        <label className="block text-xs sm:text-sm font-semibold mb-2 text-zinc-800">Email Or Username</label>
                         <input
                             type="text"
                             placeholder="example@gmail.com"
                             value={identifier}
                             onChange={(e) => setIdentifier(e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
                             className="w-full bg-[#ebebeb] border border-zinc-300 rounded-lg px-4 py-3 text-sm outline-none focus:border-[#ffc107] transition-colors"
                         />
                     </div>
@@ -74,6 +157,7 @@ const SignInPage = () => {
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
                                 className="w-full bg-[#ebebeb] border border-zinc-300 rounded-lg px-4 py-3 pr-10 text-sm outline-none focus:border-[#ffc107] transition-colors"
                             />
                             <button
@@ -99,7 +183,7 @@ const SignInPage = () => {
                             </Link>
                         </div>
                     </div>
-                </div>
+                </form>
 
 
                 <div className="w-full max-w-md mt-4 text-center text-lg">
@@ -111,15 +195,24 @@ const SignInPage = () => {
 
                 {/* Step In Button */}
                 <div className="w-full mt-8 mb-10">
-                    <button className="w-full bg-[#ffc107] text-black font-semibold text-xl py-4 flex items-center justify-center gap-3 hover:bg-[#ffca2c] transition-colors active:scale-[0.98]">
-                        <Image
-                            src="/icons/rightarrow.svg"
-                            alt="Arrow"
-                            width={24}
-                            height={24}
-                            className="invert"
-                        />
-                        <span>Step In</span>
+                    <button
+                        type="submit"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="w-full bg-[#ffc107] text-black font-semibold text-xl py-4 flex items-center justify-center gap-3 hover:bg-[#ffca2c] transition-colors active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {loading ? (
+                            <span className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                        ) : (
+                            <Image
+                                src="/icons/rightarrow.svg"
+                                alt="Arrow"
+                                width={24}
+                                height={24}
+                                className="invert"
+                            />
+                        )}
+                        <span>{loading ? "Stepping In..." : "Step In"}</span>
                     </button>
                 </div>
             </main>

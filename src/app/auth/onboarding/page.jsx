@@ -2,8 +2,10 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
 import CustomDropdown from "@/components/CustomDropdown";
+import { createClient } from "@/utils/supabase/client";
 
 const INSTITUTIONS = [
     "Knutsford University",
@@ -30,12 +32,24 @@ const PROGRAMS = [
 ];
 
 const OnboardingPage = () => {
+    const router = useRouter();
     const [institution, setInstitution] = useState("");
     const [programme, setProgramme] = useState("");
     const [gender, setGender] = useState("");
     const [yearOfStudy, setYearOfStudy] = useState("");
     const [dateOfBirth, setDateOfBirth] = useState("");
     const [displayDOB, setDisplayDOB] = useState("");
+    const [studentId, setStudentId] = useState("");
+    const [contact, setContact] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const handleKeyDown = (e, callback) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            callback(e);
+        }
+    };
 
     const handleDateChange = (e) => {
         const rawDate = e.target.value;
@@ -48,6 +62,49 @@ const OnboardingPage = () => {
         } else {
             setDisplayDOB("");
         }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError(null);
+
+        if (!institution || !programme || !gender || !yearOfStudy || !dateOfBirth || !studentId || !contact) {
+            setError("Please fill in all the details.");
+            return;
+        }
+
+        setLoading(true);
+        const supabase = createClient();
+
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session?.user) {
+            setError("You must be logged in to complete your profile.");
+            setLoading(false);
+            return;
+        }
+
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({
+                institution,
+                programme,
+                student_id: studentId,
+                year_of_study: yearOfStudy,
+                gender,
+                date_of_birth: dateOfBirth,
+                contact,
+                is_onboarded: true
+            })
+            .eq('id', session.user.id);
+
+        setLoading(false);
+        if (updateError) {
+            setError(updateError.message);
+            return;
+        }
+
+        // Redirect to dashboard/home after successful onboarding
+        router.push("/dashboard");
     };
 
     return (
@@ -90,7 +147,12 @@ const OnboardingPage = () => {
                 </div>
 
                 {/* Form Card */}
-                <div className="w-full max-w-md border-2 border-[#ffc107]/40 rounded-[2rem] px-6 py-10 space-y-7 bg-white/50 backdrop-blur-sm">
+                <form onSubmit={handleSubmit} className="w-full max-w-md border-2 border-[#ffc107]/40 rounded-[2rem] px-6 py-10 space-y-7 bg-white/50 backdrop-blur-sm">
+                    {error && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm" role="alert">
+                            <span className="block sm:inline">{error}</span>
+                        </div>
+                    )}
                     {/* Name of Institution */}
                     <CustomDropdown
                         label="Name Of Institution"
@@ -116,6 +178,9 @@ const OnboardingPage = () => {
                             <input
                                 type="text"
                                 placeholder="26103849"
+                                value={studentId}
+                                onChange={(e) => setStudentId(e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
                                 className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
                             />
                         </div>
@@ -170,10 +235,13 @@ const OnboardingPage = () => {
                         <input
                             type="tel"
                             placeholder="0500000000"
+                            value={contact}
+                            onChange={(e) => setContact(e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
                             className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
                         />
                     </div>
-                </div>
+                </form>
 
                 {/* Disclaimer */}
                 <div className="w-full max-w-md mt-6 flex justify-center items-center gap-3">
@@ -188,15 +256,24 @@ const OnboardingPage = () => {
 
                 {/* Step In Button */}
                 <div className="w-full max-w-md mt-6">
-                    <button className="w-full bg-[#ffc107] text-black font-semibold text-xl py-4 flex items-center justify-center gap-3 hover:bg-[#ffca2c] transition-colors active:scale-[0.98]">
-                        <Image
-                            src="/icons/rightarrow.svg"
-                            alt="Arrow"
-                            width={24}
-                            height={24}
-                            className="invert"
-                        />
-                        <span>Step Into The Hive</span>
+                    <button
+                        type="submit"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="w-full bg-[#ffc107] text-black font-semibold text-xl py-4 flex items-center justify-center gap-3 hover:bg-[#ffca2c] transition-colors active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {loading ? (
+                            <span className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                        ) : (
+                            <Image
+                                src="/icons/rightarrow.svg"
+                                alt="Arrow"
+                                width={24}
+                                height={24}
+                                className="invert"
+                            />
+                        )}
+                        <span>{loading ? "Completing Profile..." : "Step Into The Hive"}</span>
                     </button>
                 </div>
             </main>

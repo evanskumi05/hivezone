@@ -41,7 +41,7 @@ const PrivacyPage = () => {
                             {
                                 title: "4. Data Sharing",
                                 content:
-                                    "We only share your data with third parties when required by law or with your explicit consent. Within the platform, your public display name and institution are visible to other users. Your personal details like email, date of birth, and student ID are never publicly displayed.",
+                                    "We only share your data with third parties when required by law or with your explicit consent. Within the platform, your username and institution are visible to other users. Your personal details like email, date of birth, and student ID are never publicly displayed.",
                             },
                             {
                                 title: "5. Anonymous Features",

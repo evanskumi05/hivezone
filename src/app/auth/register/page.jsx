@@ -1,14 +1,140 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
+import { createClient } from "@/utils/supabase/client";
 
 const RegisterPage = () => {
+    const router = useRouter();
     const [agreeToTerms, setAgreeToTerms] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    // Form fields
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (error) {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+    }, [error]);
+
+    const handleKeyDown = (e, callback) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            callback(e);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError(null);
+
+        if (!firstName || !lastName || !username || !email || !password) {
+            setError("Please fill in all fields.");
+            return;
+        }
+
+        if (password.length < 6) {
+            setError("Password must be at least 6 characters long.");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setError("Passwords do not match.");
+            return;
+        }
+
+        if (!agreeToTerms) {
+            setError("You must agree to the Terms of Service and Privacy Policy.");
+            return;
+        }
+
+        setLoading(true);
+        const supabase = createClient();
+
+        // 0. Pre-check for unique username and email securely via RPC
+        const { data: existsData, error: checkError } = await supabase
+            .rpc('check_user_exists', {
+                p_username: username,
+                p_email: email
+            });
+
+        if (checkError) {
+            console.error("Error checking existing user:", checkError);
+            setError("Trouble validating information. Please try again.");
+            setLoading(false);
+            return;
+        }
+
+        if (existsData) {
+            if (existsData.username_exists) {
+                setError("This username is already taken. Please choose another.");
+                setLoading(false);
+                return;
+            }
+            if (existsData.email_exists) {
+                setError("An account with this email already exists. Try signing in.");
+                setLoading(false);
+                return;
+            }
+        }
+
+        // 1. Sign up with Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                // Email confirmation is highly recommended in production
+                // We're passing the user data to be handled by our database trigger or manually inserted
+                data: {
+                    first_name: firstName,
+                    last_name: lastName,
+                    username: username,
+                }
+            }
+        });
+
+        if (authError) {
+            setError(authError.message);
+            setLoading(false);
+            return;
+        }
+
+        // 2. Since the trigger handles initial row creation, we just need to update it with the extra info
+        // Wait for the trigger to finish by adding a small delay or retrying
+        if (authData?.user) {
+            const { error: updateError } = await supabase
+                .from('users')
+                .update({
+                    first_name: firstName,
+                    last_name: lastName,
+                    username: username,
+                    is_onboarded: false
+                })
+                .eq('id', authData.user.id);
+
+            if (updateError) {
+                console.error("Error updating public user profile:", updateError);
+                // We don't fail the whole registration if this fails, they can re-enter it later
+            }
+        }
+
+        setLoading(false);
+        // Navigate to the onboarding page
+        router.push("/auth/onboarding");
+    };
 
     return (
         <div className="min-h-screen bg-[#f5f5f5] text-zinc-900 font-sans flex flex-col">
@@ -50,7 +176,14 @@ const RegisterPage = () => {
                 </div>
 
                 {/* Form Card */}
-                <div className="w-full max-w-md border-2 border-[#ffc107]/40 rounded-[2rem] px-6 py-10 space-y-7">
+                <form onSubmit={handleSubmit} className="w-full max-w-md border-2 border-[#ffc107]/40 rounded-[2rem] px-6 py-10 space-y-7">
+
+                    {error && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm" role="alert">
+                            <span className="block sm:inline">{error}</span>
+                        </div>
+                    )}
+
                     {/* First Name & Last Name */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -58,6 +191,9 @@ const RegisterPage = () => {
                             <input
                                 type="text"
                                 placeholder="Harry"
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
                                 className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
                             />
                         </div>
@@ -66,17 +202,23 @@ const RegisterPage = () => {
                             <input
                                 type="text"
                                 placeholder="Kumi"
+                                value={lastName}
+                                onChange={(e) => setLastName(e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
                                 className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
                             />
                         </div>
                     </div>
 
-                    {/* Public Display Name */}
+                    {/* Username */}
                     <div>
-                        <label className="block text-sm font-semibold mb-2">Public Display Name</label>
+                        <label className="block text-sm font-semibold mb-2">Username</label>
                         <input
                             type="text"
                             placeholder="netskiper"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
                             className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
                         />
                     </div>
@@ -87,6 +229,9 @@ const RegisterPage = () => {
                         <input
                             type="email"
                             placeholder="example@gmail.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
                             className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors"
                         />
                     </div>
@@ -99,6 +244,9 @@ const RegisterPage = () => {
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
                                     className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 pr-10 text-sm outline-none focus:border-[#ffc107] transition-colors"
                                 />
                                 <button
@@ -125,6 +273,9 @@ const RegisterPage = () => {
                                 <input
                                     type={showConfirmPassword ? "text" : "password"}
                                     placeholder="••••••••"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    onKeyDown={(e) => handleKeyDown(e, handleSubmit)}
                                     className="w-full bg-transparent border border-zinc-300 rounded-lg px-4 py-2.5 pr-10 text-sm outline-none focus:border-[#ffc107] transition-colors"
                                 />
                                 <button
@@ -166,7 +317,7 @@ const RegisterPage = () => {
                             </Link>.
                         </label>
                     </div>
-                </div>
+                </form>
 
                 {/* Sign In Link */}
                 <div className="w-full max-w-md mt-6 text-center text-lg">
@@ -178,16 +329,25 @@ const RegisterPage = () => {
 
                 {/* Continue Button */}
                 <div className="w-full max-w-md mt-10">
-                    <a href="/auth/onboarding" className="w-full bg-[#ffc107] text-black font-semibold text-xl py-4 flex items-center justify-center gap-3 hover:bg-[#ffca2c] transition-colors active:scale-[0.98]">
-                        <Image
-                            src="/icons/rightarrow.svg"
-                            alt="Arrow"
-                            width={24}
-                            height={24}
-                            className="invert"
-                        />
-                        <span>Continue</span>
-                    </a>
+                    <button
+                        type="submit"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="w-full bg-[#ffc107] text-black font-semibold text-xl py-4 flex items-center justify-center gap-3 hover:bg-[#ffca2c] transition-colors active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {loading ? (
+                            <span className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                        ) : (
+                            <Image
+                                src="/icons/rightarrow.svg"
+                                alt="Arrow"
+                                width={24}
+                                height={24}
+                                className="invert"
+                            />
+                        )}
+                        <span>{loading ? "Creating Account..." : "Continue"}</span>
+                    </button>
                 </div>
             </main>
 

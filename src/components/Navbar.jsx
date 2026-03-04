@@ -3,17 +3,26 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { createClient } from "@/utils/supabase/client";
 
 const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
+    const [user, setUser] = useState(null);
+    const supabase = createClient();
 
     useEffect(() => {
+        const fetchUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user || null);
+        };
+        fetchUser();
+
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 50);
         };
         window.addEventListener("scroll", handleScroll, { passive: true });
         return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+    }, [supabase]);
 
     const scrollToTop = (e) => {
         if (isScrolled) {
@@ -83,12 +92,31 @@ const Navbar = () => {
                                 transition={{ duration: 0.2 }}
                                 className="ml-auto"
                             >
-                                <a
-                                    href="/auth/register"
-                                    className="bg-black text-white px-4 py-2 hover:bg-zinc-800 transition-colors font-semibold shadow-sm"
-                                >
-                                    Register
-                                </a>
+                                <div className="flex items-center gap-3 md:gap-4">
+                                    {user ? (
+                                        <a
+                                            href="/dashboard"
+                                            className="bg-black text-white px-4 py-2 hover:bg-zinc-800 transition-colors font-semibold shadow-sm w-full md:w-auto text-center pointer-events-auto"
+                                        >
+                                            Dashboard
+                                        </a>
+                                    ) : (
+                                        <>
+                                            <a
+                                                href="/auth/signin"
+                                                className="text-black font-semibold text-sm md:text-base hover:text-gray-600 transition-colors pointer-events-auto"
+                                            >
+                                                Sign In
+                                            </a>
+                                            <a
+                                                href="/auth/register"
+                                                className="bg-black text-white px-3 py-1.5 md:px-4 md:py-2 text-sm md:text-base hover:bg-zinc-800 transition-colors font-semibold shadow-sm pointer-events-auto"
+                                            >
+                                                Register
+                                            </a>
+                                        </>
+                                    )}
+                                </div>
                             </motion.div>
                         </>
                     )}

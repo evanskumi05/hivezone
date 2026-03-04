@@ -195,11 +195,11 @@ const CampusHustlePage = () => {
                                 {/* Case study image on top of triangle */}
                                 <div className="absolute inset-0 flex items-center justify-center px-4">
                                     <Image
-                                        src="/campus-hustle-case.png"
-                                        alt="Campus hustle case study"
+                                        src="/campus-hustle.png"
+                                        alt="Campus hustle"
                                         width={2498}
                                         height={872}
-                                        className="w-full max-w-5xl object-contain"
+                                        className="w-full max-w-2xl object-contain"
                                     />
                                 </div>
                             </div>
