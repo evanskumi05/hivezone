@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/utils/supabase/client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
     Search01Icon,
@@ -14,89 +16,320 @@ import {
     UserGroupIcon,
     PinIcon,
     Add01Icon,
-    InformationCircleIcon
+    InformationCircleIcon,
+    Tick01Icon,
+    LeftToRightListDashIcon,
+    Delete02Icon,
+    Link01Icon,
+    LockIcon,
+    LicenseIcon,
+    MoreVerticalIcon,
+    Logout01Icon
 } from "@hugeicons/core-free-icons";
+import Avatar from "@/components/ui/Avatar";
+import { useUI } from "@/components/ui/UIProvider";
 
-// Dummy Study Circles Data
-const myCircles = [
-    {
-        id: "circle-1",
-        name: "CS Level 300 Study Group",
-        course: "Computer Science",
-        lastMessage: "David: Has anyone finished the algorithm assignment?",
-        timestamp: "10:42 AM",
-        unread: 5,
-        members: 124,
-        avatar: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        pinnedMsg: "Algorithm Assignment due this Friday at 11:59PM!"
-    },
-    {
-        id: "circle-2",
-        name: "Campus Entrepreneurs",
-        course: "Business & Startups",
-        lastMessage: "Sarah: The pitch deck check-in is tomorrow.",
-        timestamp: "Yesterday",
-        unread: 0,
-        members: 89,
-        avatar: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        pinnedMsg: "Next meetup: KNUST Business School Hall, 5PM."
-    },
-    {
-        id: "circle-3",
-        name: "Nursing Anatomy Help",
-        course: "Nursing",
-        lastMessage: "You: Thank you for the brain diagrams!",
-        timestamp: "Monday",
-        unread: 0,
-        members: 42,
-        avatar: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        pinnedMsg: "Anatomy Quiz 3 scope covers Chapters 4-6."
-    }
-];
+const formatDate = (date) => {
+    return new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true,
+    }).format(new Date(date));
+};
 
-const discoverCircles = [
-    {
-        id: "circle-4",
-        name: "Calculus II Tutors",
-        course: "Mathematics",
-        members: 210,
-        avatar: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        description: "A community for helping each other survive Calculus II."
-    },
-    {
-        id: "circle-5",
-        name: "UI/UX Design Enthusiasts",
-        course: "Design",
-        members: 156,
-        avatar: "https://images.unsplash.com/photo-1561070791-2526d30994b5?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        description: "Share your Figma prototypes and get feedback!"
-    }
-];
-
-// Dummy messages for an active circle
-const initialMessages = [
-    { id: 1, sender: "David", text: "Hey everyone! Let's start a thread for the upcoming project.", timestamp: "10:30 AM", avatar: "https://i.pravatar.cc/150?12" },
-    { id: 2, sender: "Sarah", text: "Agreed. I am stuck on the second part of the algorithm.", timestamp: "10:32 AM", avatar: "https://i.pravatar.cc/150?15" },
-    { id: 3, sender: "me", text: "I figured it out, I can share a snippet in a bit.", timestamp: "10:35 AM", avatar: "https://i.pravatar.cc/150?95" },
-    { id: 4, sender: "David", text: "Has anyone finished the algorithm assignment?", timestamp: "10:42 AM", avatar: "https://i.pravatar.cc/150?12" }
-];
+// Helper to generate a random invite code
+const generateInviteCode = () => {
+    return Math.random().toString(36).substring(2, 10).toUpperCase();
+};
 
 export default function StudyCirclesPage() {
+    const { showToast, confirmAction } = useUI();
+    const supabase = createClient();
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState("my"); // "my" or "discover"
+    const [profile, setProfile] = useState(null);
+    const [myCircles, setMyCircles] = useState([]);
+    const [discoverCircles, setDiscoverCircles] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Determine active layout based on screen size implicitly by using CSS media queries on states
-    const [activeCircleId, setActiveCircleId] = useState("circle-1"); // Default open for PC view
+    const [isJoiningCode, setIsJoiningCode] = useState(false);
+    const [joinViaCode, setJoinViaCode] = useState("");
+
+    const [activeCircleId, setActiveCircleId] = useState(null);
     const [isMobileListVisible, setIsMobileListVisible] = useState(true);
 
     const [newMessage, setNewMessage] = useState("");
-    const [messages, setMessages] = useState(initialMessages);
+    const [messages, setMessages] = useState([]);
     const messagesEndRef = useRef(null);
+
+    const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+    const menuRef = useRef(null);
+    const router = useRouter();
 
     // Auto-scroll to bottom of active chat
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
+
+    useEffect(() => {
+        const fetchInitialData = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                loadUserData(session.user.id);
+            }
+        };
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                loadUserData(session.user.id);
+            }
+        });
+
+        fetchInitialData();
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const loadUserData = async (userId) => {
+        try {
+            // Fetch Profile
+            const { data: profileData, error: profileError } = await supabase
+                .from("users")
+                .select("*")
+                .eq("id", userId)
+                .single();
+
+            if (profileError) {
+                // Silently fail or handle gracefully
+            }
+            setProfile(profileData);
+
+            // Fetch My Circles
+            fetchMyCircles(userId);
+            // Fetch Discoverable Circles
+            fetchDiscoverCircles(userId);
+        } catch (err) {
+            // Handle error silently
+        }
+    };
+
+    const fetchMyCircles = async (userId) => {
+        setLoading(true);
+        // Fetch joined circles and their member counts
+        const { data, error } = await supabase
+            .from("study_circle_members")
+            .select(`
+                circle_id,
+                study_circles (*)
+            `)
+            .eq("user_id", userId);
+
+
+        if (error) {
+            setLoading(false);
+            return;
+        }
+
+        if (data) {
+            // For each circle, fetch member count separately to keep it simple and reliable
+            const formatted = await Promise.all(data.map(async (item) => {
+                const { count } = await supabase
+                    .from("study_circle_members")
+                    .select("*", { count: 'exact', head: true })
+                    .eq("circle_id", item.circle_id);
+
+                // Handle both object and array return formats from Supabase
+                const circleInfo = Array.isArray(item.study_circles) ? item.study_circles[0] : item.study_circles;
+
+                if (!circleInfo) {
+                    return null;
+                }
+
+                return {
+                    ...circleInfo,
+                    member_count: count || 0,
+                    unread: 0,
+                    last_message: circleInfo.last_message || "No messages yet",
+                    timestamp: circleInfo.last_message_at
+                        ? formatDate(circleInfo.last_message_at)
+                        : formatDate(circleInfo.created_at || new Date())
+                };
+            }));
+
+            // Filter out any nulls if mapping failed
+            const validCircles = formatted.filter(Boolean);
+
+            // Sort by most recent activity
+            const sorted = validCircles.sort((a, b) => {
+                const dateA = new Date(a.last_message_at || a.created_at);
+                const dateB = new Date(b.last_message_at || b.created_at);
+                return dateB - dateA;
+            });
+
+            setMyCircles(sorted);
+        }
+        setLoading(false);
+    };
+
+    const fetchDiscoverCircles = async (userId) => {
+        const { data: joinedIds } = await supabase
+            .from("study_circle_members")
+            .select("circle_id")
+            .eq("user_id", userId);
+
+        const joinedIdList = joinedIds?.map(j => j.circle_id) || [];
+
+        let query = supabase.from("study_circles").select("*")
+            .eq("is_private", false); // Only discover public circles
+
+        if (joinedIdList.length > 0) {
+            query = query.not("id", "in", `(${joinedIdList.join(",")})`);
+        }
+
+        const { data, error } = await query;
+        if (error) {
+            return;
+        }
+
+        if (data) {
+            // Fetch counts for discoverable circles too
+            const formatted = await Promise.all(data.map(async (circle) => {
+                const { count } = await supabase
+                    .from("study_circle_members")
+                    .select("*", { count: 'exact', head: true })
+                    .eq("circle_id", circle.id);
+                return { ...circle, member_count: count || 0 };
+            }));
+            setDiscoverCircles(formatted);
+        }
+    };
+
+    const handleJoinViaCode = async (e) => {
+        e.preventDefault();
+        if (!joinViaCode.trim() || !profile) return;
+
+        setIsJoiningCode(true);
+        const { data, error } = await supabase
+            .from("study_circles")
+            .select("id, name")
+            .eq("invite_code", joinViaCode.trim().toUpperCase())
+            .single();
+
+        if (error || !data) {
+            showToast("Invalid invite code", "error");
+        } else {
+            // Check if already a member
+            const { data: membership } = await supabase
+                .from("study_circle_members")
+                .select("*")
+                .eq("circle_id", data.id)
+                .eq("user_id", profile.id)
+                .single();
+
+            if (membership) {
+                showToast(`You are already a member of ${data.name}`, "info");
+            } else {
+                const { error: joinError } = await supabase
+                    .from("study_circle_members")
+                    .insert({
+                        circle_id: data.id,
+                        user_id: profile.id
+                    });
+
+                if (!joinError) {
+                    showToast(`Joined ${data.name}!`, "success");
+                    setJoinViaCode("");
+                    fetchMyCircles(profile.id);
+                    setActiveTab("my");
+                    setActiveCircleId(data.id);
+                } else {
+                    showToast("Failed to join circle", "error");
+                }
+            }
+        }
+        setIsJoiningCode(false);
+    };
+
+    // Fetch messages when active circle changes
+    useEffect(() => {
+        if (!activeCircleId || activeTab !== "my") return;
+
+        const fetchMessages = async () => {
+            const { data, error } = await supabase
+                .from("study_circle_messages")
+                .select(`
+                    *,
+                    author:users (display_name, profile_picture)
+                `)
+                .eq("circle_id", activeCircleId)
+                .order("created_at", { ascending: true });
+
+            if (error) {
+                // Handle error
+            }
+
+            if (!error) {
+                setMessages(data.map(m => ({
+                    id: m.id,
+                    sender: m.author?.display_name || "Unknown",
+                    text: m.content,
+                    timestamp: formatDate(m.created_at),
+                    avatar: m.author?.profile_picture,
+                    user_id: m.user_id
+                })));
+                setTimeout(scrollToBottom, 100);
+            }
+        };
+
+        fetchMessages();
+
+        // Realtime subscription
+        const channel = supabase
+            .channel(`circle-${activeCircleId}`)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'study_circle_messages',
+                filter: `circle_id=eq.${activeCircleId}`
+            }, async (payload) => {
+                // Fetch author details for the new message
+                const { data: authorData } = await supabase
+                    .from("users")
+                    .select("display_name, profile_picture")
+                    .eq("id", payload.new.user_id)
+                    .single();
+
+                const newMsg = {
+                    id: payload.new.id,
+                    sender: authorData?.display_name || "Unknown",
+                    text: payload.new.content,
+                    timestamp: formatDate(payload.new.created_at),
+                    avatar: authorData?.profile_picture,
+                    user_id: payload.new.user_id
+                };
+
+                setMessages(prev => {
+                    // Avoid duplicates if already optimistically added
+                    if (prev.some(m => m.id === newMsg.id || (m.text === newMsg.text && m.user_id === newMsg.user_id && m.id.toString().startsWith('temp-')))) {
+                        return prev.map(m => (m.text === newMsg.text && m.user_id === newMsg.user_id) ? newMsg : m);
+                    }
+                    return [...prev, newMsg];
+                });
+
+                // Update last message in sidebar
+                setMyCircles(prev => prev.map(c =>
+                    c.id === activeCircleId
+                        ? { ...c, last_message: `${newMsg.sender}: ${newMsg.text}`, last_message_at: payload.new.created_at, timestamp: formatDate(payload.new.created_at) }
+                        : c
+                ).sort((a, b) => new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at)));
+
+                setTimeout(scrollToBottom, 100);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [activeCircleId, activeTab]);
 
     // Handle Escape key to close active chat and handle browser back button
     useEffect(() => {
@@ -113,6 +346,7 @@ export default function StudyCirclesPage() {
         const handlePopState = (e) => {
             if (!isMobileListVisible) {
                 setIsMobileListVisible(true);
+                setActiveCircleId(null); // Clear highlight when closing on mobile
             }
         };
 
@@ -129,32 +363,134 @@ export default function StudyCirclesPage() {
         setActiveCircleId(id);
         if (isMobileListVisible && window.innerWidth < 768) {
             setIsMobileListVisible(false); // Hide list on mobile
-            // Push a virtual state to the browser history so the back button closes the circle
             window.history.pushState({ chatOpen: true }, "", window.location.href);
-        } else {
-            setIsMobileListVisible(false);
         }
     };
 
-    const handleSendMessage = (e) => {
+    const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim()) return;
+        if (!newMessage.trim() || !profile || !activeCircleId) return;
 
-        const newMsg = {
-            id: messages.length + 1,
-            sender: "me",
+        const tempMessage = {
+            id: 'temp-' + Date.now(),
+            sender: profile.display_name,
             text: newMessage,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            avatar: "https://i.pravatar.cc/150?95"
+            timestamp: formatDate(new Date()),
+            avatar: profile.profile_picture,
+            user_id: profile.id
         };
 
-        setMessages([...messages, newMsg]);
+        // UI Optimistic update
+        setMessages(prev => [...prev, tempMessage]);
+
+        // Sidebar Optimistic update
+        setMyCircles(prev => prev.map(c =>
+            c.id === activeCircleId
+                ? { ...c, last_message: `You: ${newMessage}`, last_message_at: new Date().toISOString(), timestamp: formatDate(new Date()) }
+                : c
+        ).sort((a, b) => new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at)));
+
+        const msgText = newMessage;
         setNewMessage("");
         setTimeout(scrollToBottom, 100);
+
+        const { error } = await supabase
+            .from("study_circle_messages")
+            .insert({
+                circle_id: activeCircleId,
+                user_id: profile.id,
+                content: msgText
+            });
+
+        // Update circle activity in DB (manual sync)
+        await supabase
+            .from("study_circles")
+            .update({
+                last_message: `${profile.display_name}: ${msgText}`,
+                last_message_at: new Date().toISOString()
+            })
+            .eq("id", activeCircleId);
+
+        if (error) {
+            showToast("Failed to send message", "error");
+            // Remove temp message on error
+            setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
+        }
     };
 
+    const handleJoinCircle = async (circleId) => {
+        if (!profile) return;
+
+        const { error } = await supabase
+            .from("study_circle_members")
+            .insert({
+                circle_id: circleId,
+                user_id: profile.id
+            });
+
+        if (!error) {
+            showToast("Joined Study Circle!", "success");
+            fetchMyCircles(profile.id);
+            fetchDiscoverCircles(profile.id);
+            setActiveTab("my");
+            setActiveCircleId(circleId);
+        } else {
+            showToast("Failed to join circle", "error");
+        }
+    };
+
+    const handleLeaveCircle = async (circleId) => {
+        if (!profile) return;
+
+        confirmAction({
+            title: "Leave Study Circle",
+            message: "Are you sure you want to leave this study circle? You won't receive updates anymore.",
+            confirmText: "Leave",
+            cancelText: "Stay",
+            action: async () => {
+                const { error } = await supabase
+                    .from("study_circle_members")
+                    .delete()
+                    .eq("circle_id", circleId)
+                    .eq("user_id", profile.id);
+
+                if (!error) {
+                    showToast("Left Study Circle", "success");
+                    fetchMyCircles(profile.id);
+                    fetchDiscoverCircles(profile.id);
+                    setActiveCircleId(null);
+                    if (window.innerWidth < 768) {
+                        setIsMobileListVisible(true);
+                    }
+                } else {
+                    showToast("Failed to leave circle", "error");
+                }
+            }
+        });
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setIsMoreMenuOpen(false);
+            }
+        };
+
+        if (isMoreMenuOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+        } else {
+            document.removeEventListener("mousedown", handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [isMoreMenuOpen]);
+
     const activeCircleData = [...myCircles, ...discoverCircles].find(c => c.id === activeCircleId);
-    const displayedList = activeTab === "my" ? myCircles : discoverCircles;
+    const displayedList = activeTab === "my"
+        ? myCircles.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.course?.toLowerCase().includes(searchQuery.toLowerCase()))
+        : discoverCircles.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.course?.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
         <div className="flex flex-col h-[calc(100vh-64px)] md:h-[calc(100vh-32px)] md:min-h-[750px] bg-white md:bg-[#fcf6de] md:px-4 sm:px-8 md:gap-4 max-w-[1400px] mx-auto w-full md:pb-4">
@@ -172,10 +508,13 @@ export default function StudyCirclesPage() {
                         Study Circles
                     </h1>
                 </div>
-                <button className="bg-black text-white hover:bg-gray-800 font-bold text-[13px] px-5 py-2.5 rounded-full transition-colors active:scale-95 shadow-sm flex items-center gap-2">
+                <Link
+                    href="/dashboard/study-circles/create"
+                    className="bg-black text-white hover:bg-gray-800 font-bold text-[13px] px-5 py-2.5 rounded-full transition-colors active:scale-95 shadow-sm flex items-center gap-2"
+                >
                     <HugeiconsIcon icon={Add01Icon} className="w-4 h-4" />
                     Create Circle
-                </button>
+                </Link>
             </div>
 
             {/* Side-by-Side Container */}
@@ -216,11 +555,51 @@ export default function StudyCirclesPage() {
                                 Discover
                             </button>
                         </div>
+                        {/* Discover - Join via Code */}
+                        {activeTab === 'discover' && (
+                            <form onSubmit={handleJoinViaCode} className="p-4 bg-blue-50/50 border-b border-gray-100 flex flex-col gap-2">
+                                <label className="text-[10px] font-bold text-blue-600 uppercase tracking-widest ml-1">Have an invite code?</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Enter 8-digit code"
+                                        value={joinViaCode}
+                                        onChange={(e) => setJoinViaCode(e.target.value.toUpperCase())}
+                                        maxLength={8}
+                                        className="flex-1 h-10 px-4 bg-white border border-gray-200 rounded-xl text-sm font-black tracking-widest outline-none focus:border-blue-400 transition-colors uppercase"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={isJoiningCode || !joinViaCode.trim()}
+                                        className="px-4 h-10 bg-blue-600 text-white rounded-xl font-bold text-xs hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+                                    >
+                                        {isJoiningCode ? "Joining..." : "Join"}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
                     </div>
 
                     {/* List */}
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
-                        {displayedList.map((circle) => (
+                        {loading ? (
+                            <div className="flex flex-col gap-1 p-4">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className="flex items-center gap-4 p-4 animate-pulse">
+                                        <div className="w-14 h-14 bg-gray-100 rounded-2xl shrink-0"></div>
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-4 bg-gray-100 rounded-full w-3/4"></div>
+                                            <div className="h-3 bg-gray-50 rounded-full w-1/2"></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : displayedList.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
+                                <HugeiconsIcon icon={LeftToRightListDashIcon} className="w-12 h-12 mb-4" />
+                                <p className="font-bold">No circles found</p>
+                            </div>
+                        ) : displayedList.map((circle) => (
                             <div
                                 key={circle.id}
                                 onClick={() => openCircle(circle.id)}
@@ -232,7 +611,7 @@ export default function StudyCirclesPage() {
                             >
                                 {/* Avatar */}
                                 <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0 border border-gray-200">
-                                    <img src={circle.avatar} alt={circle.name} className="w-full h-full object-cover" />
+                                    <Avatar src={circle.avatar_url} name={circle.name} className="w-full h-full rounded-none" />
                                 </div>
 
                                 {/* Details */}
@@ -251,11 +630,11 @@ export default function StudyCirclesPage() {
                                         <span className="text-[9px] font-bold text-white bg-blue-600 px-1.5 py-0.5 rounded-[4px]">{circle.course}</span>
                                         <div className="flex items-center gap-1 text-[11px] font-semibold text-gray-500">
                                             <HugeiconsIcon icon={UserGroupIcon} className="w-3 h-3" />
-                                            {circle.members}
+                                            {circle.member_count || 0}
                                         </div>
                                     </div>
                                     <p className={`text-[13px] truncate ${circle.unread > 0 ? 'text-black font-semibold' : 'text-gray-500 font-medium'}`}>
-                                        {activeTab === "my" ? circle.lastMessage : circle.description}
+                                        {activeTab === "my" ? (circle.last_message || "No messages yet") : circle.description}
                                     </p>
                                 </div>
 
@@ -286,23 +665,71 @@ export default function StudyCirclesPage() {
                                     </button>
 
                                     <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-gray-200">
-                                        <img src={activeCircleData.avatar} alt={activeCircleData.name} className="w-full h-full object-cover" />
+                                        <Avatar src={activeCircleData.avatar_url} name={activeCircleData.name} className="w-full h-full rounded-none" />
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className="font-black text-gray-900 text-[16px] truncate">{activeCircleData.name}</span>
+                                        <div className="flex items-center gap-1.5">
+                                            {profile?.id === activeCircleData.created_by ? (
+                                                <Link href={`/dashboard/study-circles/${activeCircleData.id}/edit`} className="hover:underline flex items-center gap-1.5">
+                                                    <span className="font-black text-gray-900 text-[16px] truncate">{activeCircleData.name}</span>
+                                                </Link>
+                                            ) : (
+                                                <span className="font-black text-gray-900 text-[16px] truncate">{activeCircleData.name}</span>
+                                            )}
+                                            {activeCircleData.is_private && (
+                                                <HugeiconsIcon icon={LockIcon} className="w-3 h-3 text-gray-400" variant="solid" />
+                                            )}
+                                        </div>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[11px] font-semibold text-gray-500">{activeCircleData.members} members</span>
+                                            <span className="text-[11px] font-semibold text-gray-500">{activeCircleData.member_count || 0} members</span>
+                                            {activeCircleData.invite_code && (
+                                                <div className="flex items-center gap-1 ml-1 text-blue-600 font-bold text-[10px] bg-blue-50 px-1.5 py-0.5 rounded cursor-pointer hover:bg-blue-100 transition-colors"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(activeCircleData.invite_code);
+                                                        showToast("Invite code copied!", "success");
+                                                    }}
+                                                >
+                                                    <HugeiconsIcon icon={Link01Icon} className="w-2.5 h-2.5" />
+                                                    Code: {activeCircleData.invite_code}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-500">
+                                <div className="flex items-center gap-1 md:gap-2 shrink-0">
+                                    <button className="hidden sm:flex w-10 h-10 rounded-full items-center justify-center hover:bg-gray-100 transition-colors text-gray-500">
                                         <HugeiconsIcon icon={InformationCircleIcon} className="w-5 h-5" />
                                     </button>
-                                    <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-500">
-                                        <HugeiconsIcon icon={Menu01Icon} className="w-5 h-5" />
-                                    </button>
+                                    {activeTab === "my" && (
+                                        <div className="relative" ref={menuRef}>
+                                            <button
+                                                onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isMoreMenuOpen ? 'bg-gray-100 text-gray-900' : 'hover:bg-gray-100 text-gray-500'}`}
+                                                title="More options"
+                                            >
+                                                <HugeiconsIcon icon={MoreVerticalIcon} className="w-5 h-5" />
+                                            </button>
+
+                                            {/* Dropdown Menu */}
+                                            {isMoreMenuOpen && (
+                                                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-[100] animate-in fade-in zoom-in duration-200 origin-top-right">
+                                                    <button
+                                                        onClick={() => {
+                                                            setIsMoreMenuOpen(false);
+                                                            handleLeaveCircle(activeCircleData.id);
+                                                        }}
+                                                        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-red-50 text-red-600 transition-colors group"
+                                                    >
+                                                        <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                            <HugeiconsIcon icon={Logout01Icon} className="w-4 h-4" />
+                                                        </div>
+                                                        <span className="text-sm font-black">Leave Circle</span>
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                     <button
                                         onClick={() => {
                                             if (!isMobileListVisible && window.innerWidth < 768) {
@@ -320,13 +747,13 @@ export default function StudyCirclesPage() {
                             </div>
 
                             {/* Pinned Message Banner */}
-                            {(activeCircleData.pinnedMsg && activeTab === "my") && (
+                            {(activeCircleData.pinned_message && activeTab === "my") && (
                                 <div className="border-b border-gray-100 bg-blue-50/80 px-4 md:px-6 py-2.5 flex items-start gap-3 shrink-0 shadow-sm z-0">
                                     <HugeiconsIcon icon={PinIcon} className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
                                     <div className="flex flex-col">
                                         <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">Pinned Resource</span>
                                         <span className="font-bold text-gray-800 text-[13px] leading-tight max-w-[280px] lg:max-w-xl">
-                                            {activeCircleData.pinnedMsg}
+                                            {activeCircleData.pinned_message}
                                         </span>
                                     </div>
                                 </div>
@@ -335,9 +762,14 @@ export default function StudyCirclesPage() {
                             {/* Messages Scroll Area */}
                             {activeTab === "my" ? (
                                 <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 custom-scrollbar bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-opacity-20">
-                                    {messages.map((msg, index) => {
-                                        const isMe = msg.sender === "me";
-                                        const showAvatar = !isMe && (index === 0 || messages[index - 1].sender !== msg.sender);
+                                    {messages.length === 0 ? (
+                                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-40">
+                                            <HugeiconsIcon icon={SentIcon} className="w-12 h-12 mb-4" />
+                                            <p className="font-bold">No messages yet. Start the conversation!</p>
+                                        </div>
+                                    ) : messages.map((msg, index) => {
+                                        const isMe = msg.user_id === profile?.id;
+                                        const showAvatar = !isMe && (index === 0 || messages[index - 1].user_id !== msg.user_id);
 
                                         return (
                                             <div key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
@@ -346,7 +778,7 @@ export default function StudyCirclesPage() {
                                                     {!isMe ? (
                                                         <div className="shrink-0 w-8 h-8 rounded-full overflow-hidden mt-1">
                                                             {showAvatar ? (
-                                                                <img src={msg.avatar} alt={msg.sender} className="w-full h-full object-cover" />
+                                                                <Avatar src={msg.avatar} name={msg.sender} className="w-full h-full" />
                                                             ) : <div className="w-8 h-8"></div>}
                                                         </div>
                                                     ) : null}
@@ -377,16 +809,19 @@ export default function StudyCirclesPage() {
                                 /* Discover Mode - Join Group Banner */
                                 <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50/50 text-center">
                                     <div className="w-32 h-32 rounded-[2rem] overflow-hidden shadow-lg border-4 border-white mb-6">
-                                        <img src={activeCircleData.avatar} alt={activeCircleData.name} className="w-full h-full object-cover" />
+                                        <Avatar src={activeCircleData.avatar_url} name={activeCircleData.name} className="w-full h-full rounded-none" />
                                     </div>
                                     <h2 className="text-3xl font-black font-newyork text-gray-900 mb-2">{activeCircleData.name}</h2>
                                     <p className="text-gray-500 font-medium mb-6 max-w-sm">{activeCircleData.description}</p>
                                     <div className="flex items-center gap-4 text-gray-600 font-bold bg-white px-6 py-2 rounded-full border border-gray-200 shadow-sm mb-8">
-                                        <div className="flex items-center gap-1"><HugeiconsIcon icon={UserGroupIcon} className="w-4 h-4" /> {activeCircleData.members} Members</div>
+                                        <div className="flex items-center gap-1"><HugeiconsIcon icon={UserGroupIcon} className="w-4 h-4" /> {activeCircleData.member_count || 0} Members</div>
                                         <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
                                         <div className="text-blue-600">{activeCircleData.course}</div>
                                     </div>
-                                    <button className="bg-black text-white hover:bg-gray-800 font-black px-10 py-4 rounded-full text-[16px] shadow-lg active:scale-95 transition-all">
+                                    <button
+                                        onClick={() => handleJoinCircle(activeCircleData.id)}
+                                        className="bg-black text-white hover:bg-gray-800 font-black px-10 py-4 rounded-full text-[16px] shadow-lg active:scale-95 transition-all"
+                                    >
                                         Join Study Circle
                                     </button>
                                 </div>
@@ -437,10 +872,8 @@ export default function StudyCirclesPage() {
                         /* Empty State if no circle is selected */
                         <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-gray-50/50">
                             <div className="relative w-32 h-32 mb-8 flex items-center justify-center">
-                                {/* Decorative rings */}
                                 <div className="absolute inset-0 border-[3px] border-[#ffc107]/20 rounded-full animate-[ping_3s_ease-in-out_infinite]"></div>
                                 <div className="absolute inset-2 border-[2px] border-[#ffc107]/40 rounded-full animate-[ping_3s_ease-in-out_infinite_animation-delay-500ms]"></div>
-                                {/* Central Icon */}
                                 <div className="relative z-10 w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-100">
                                     <HugeiconsIcon icon={UserGroupIcon} className="w-10 h-10 text-[#ffc107]" variant="solid" tone="solid" strokeWidth={2} />
                                 </div>
@@ -452,7 +885,6 @@ export default function StudyCirclesPage() {
                         </div>
                     )}
                 </div>
-
             </div>
         </div>
     );

@@ -46,8 +46,8 @@ export const UIProvider = ({ children }) => {
         return new Promise((resolve) => {
             setConfirmData({
                 ...data,
-                onConfirm: () => {
-                    data.onConfirm?.();
+                onConfirm: async () => {
+                    await (data.onConfirm || data.action)?.();
                     setConfirmData(null);
                     resolve(true);
                 },
