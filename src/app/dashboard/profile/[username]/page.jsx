@@ -1,14 +1,16 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { LinkSquare02Icon, Flag01Icon } from "@hugeicons/core-free-icons";
+import { LinkSquare02Icon, Flag01Icon, CheckmarkBadge01Icon, MoreHorizontalCircle01Icon, Delete02Icon, Alert01Icon, FavouriteIcon, Comment01Icon } from "@hugeicons/core-free-icons";
 import { ProfileSkeleton } from "@/components/ui/Skeleton";
 import Avatar from "@/components/ui/Avatar";
 import { getDisplayName } from "@/utils/stringUtils";
 import { useUI } from "@/components/ui/UIProvider";
+import FeedPostCard from "@/components/FeedPostCard";
 
 export default function PublicProfilePage() {
     const router = useRouter();
@@ -16,8 +18,21 @@ export default function PublicProfilePage() {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
+    const { openReportModal, showToast } = useUI();
+
+    // Tabs state
+    const [activeTab, setActiveTab] = useState("posts"); // 'posts' | 'gigs'
+    const [userPosts, setUserPosts] = useState([]);
+    const [userGigs, setUserGigs] = useState([]);
+    const [loadingContent, setLoadingContent] = useState(false);
+
+    // Feed interactions state
     const [currentUserId, setCurrentUserId] = useState(null);
-    const { openReportModal } = useUI();
+    const [currentUserProfile, setCurrentUserProfile] = useState(null);
+    const [activeCommentId, setActiveCommentId] = useState(null);
+    const [commentsData, setCommentsData] = useState({});
+    const [commentInputs, setCommentInputs] = useState({});
+    const [loadingComments, setLoadingComments] = useState({});
 
     const supabase = createClient();
 
@@ -29,6 +44,11 @@ export default function PublicProfilePage() {
             const { data: { session } } = await supabase.auth.getSession();
             const loggedInId = session?.user?.id;
             setCurrentUserId(loggedInId);
+
+            if (loggedInId) {
+                const { data: currProfile } = await supabase.from('users').select('*').eq('id', loggedInId).single();
+                setCurrentUserProfile(currProfile);
+            }
 
             // Fetch profile data from public.users table using the URL parameter
             const { data: profileData, error } = await supabase
@@ -47,6 +67,7 @@ export default function PublicProfilePage() {
                     return;
                 }
                 setProfile(profileData);
+                fetchUserContent(profileData.id);
             }
 
             setLoading(false);
@@ -54,6 +75,234 @@ export default function PublicProfilePage() {
 
         fetchUser();
     }, [params?.username, supabase]);
+
+    const fetchUserContent = async (userId) => {
+        setLoadingContent(true);
+        try {
+            // Fetch user's posts
+            const { data: postsData } = await supabase
+                .from("feeds")
+                .select(`
+                    *,
+                    author:users!inner (
+                        display_name,
+                        username,
+                        profile_picture,
+                        is_verified,
+                        institution
+                    ),
+                    likes:feed_likes(user_id),
+                    comments:feed_comments(count)
+                `)
+                .eq("user_id", userId)
+                .order("created_at", { ascending: false });
+
+            // Fetch user's gigs
+            const { data: gigsData } = await supabase
+                .from("gigs")
+                .select(`
+                    *,
+                    author:users!inner (
+                        display_name,
+                        profile_picture,
+                        is_verified,
+                        username
+                    )
+                `)
+                .eq("user_id", userId)
+                .order("created_at", { ascending: false });
+
+            // Get current session for like status
+            const { data: { session } } = await supabase.auth.getSession();
+            const loggedInId = session?.user?.id;
+
+            const processedPosts = postsData?.map(post => ({
+                ...post,
+                likes_count: post.likes?.length || 0,
+                comments_count: post.comments?.[0]?.count || 0,
+                is_liked: post.likes?.some(l => l.user_id === loggedInId)
+            })) || [];
+
+            setUserPosts(processedPosts);
+            setUserGigs(gigsData || []);
+        } catch (error) {
+            console.error("Error fetching user content:", error);
+        } finally {
+            setLoadingContent(false);
+        }
+    };
+
+    const handleReportPost = async (post) => {
+        openReportModal({
+            item_id: post.id,
+            item_type: "feed"
+        });
+    };
+
+    const handleLike = async (post) => {
+        try {
+            const isLiked = post.is_liked;
+            const postId = post.id;
+
+            // Optimistic update
+            setUserPosts(prev => prev.map(p =>
+                p.id === postId
+                    ? { ...p, is_liked: !isLiked, likes_count: isLiked ? p.likes_count - 1 : p.likes_count + 1 }
+                    : p
+            ));
+
+            if (isLiked) {
+                await supabase.from('feed_likes').delete().eq('feed_id', postId).eq('user_id', currentUserId);
+            } else {
+                await supabase.from('feed_likes').insert([{ feed_id: postId, user_id: currentUserId }]);
+
+                // Notification logic
+                if (post.user_id !== currentUserId) {
+                    await supabase.from('notifications').insert({
+                        user_id: post.user_id,
+                        actor_id: currentUserId,
+                        type: 'like',
+                        entity_type: 'feed',
+                        entity_id: postId,
+                        message: `liked your post`
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Error toggling like:", error);
+            // Revert on error
+            setUserPosts(prev => prev.map(p =>
+                p.id === post.id
+                    ? { ...p, is_liked: post.is_liked, likes_count: post.likes_count }
+                    : p
+            ));
+        }
+    };
+
+    const fetchComments = async (postId) => {
+        if (commentsData[postId]) return;
+        setLoadingComments(prev => ({ ...prev, [postId]: true }));
+        try {
+            const { data, error } = await supabase
+                .from('feed_comments')
+                .select(`
+                    *,
+                    author:users (
+                        display_name,
+                        username,
+                        profile_picture
+                    )
+                `)
+                .eq('feed_id', postId)
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+            setCommentsData(prev => ({ ...prev, [postId]: data }));
+        } catch (error) {
+            console.error("Error fetching comments:", error);
+        } finally {
+            setLoadingComments(prev => ({ ...prev, [postId]: false }));
+        }
+    };
+
+    const handleCommentSubmit = async (postId) => {
+        const content = commentInputs[postId];
+        if (!content?.trim()) return;
+
+        try {
+            const { data: newComment, error } = await supabase
+                .from('feed_comments')
+                .insert([{
+                    feed_id: postId,
+                    user_id: currentUserId,
+                    content: content.trim()
+                }])
+                .select(`
+                    *,
+                    author:users (
+                        display_name,
+                        username,
+                        profile_picture
+                    )
+                `)
+                .single();
+
+            if (error) throw error;
+
+            setCommentsData(prev => ({
+                ...prev,
+                [postId]: [...(prev[postId] || []), newComment]
+            }));
+            setCommentInputs(prev => ({ ...prev, [postId]: "" }));
+
+            // Update counts in posts
+            setUserPosts(prev => prev.map(p =>
+                p.id === postId ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p
+            ));
+
+            // Notification logic
+            const post = userPosts.find(p => p.id === postId);
+            if (post && post.user_id !== currentUserId) {
+                await supabase.from('notifications').insert({
+                    user_id: post.user_id,
+                    actor_id: currentUserId,
+                    type: 'comment',
+                    entity_type: 'feed',
+                    entity_id: postId,
+                    message: `commented on your post`
+                });
+            }
+
+        } catch (error) {
+            console.error("Error posting comment:", error);
+        }
+    };
+
+    const handleDeleteComment = async (commentId, postId) => {
+        try {
+            const { error } = await supabase
+                .from('feed_comments')
+                .delete()
+                .eq('id', commentId);
+
+            if (error) throw error;
+
+            setCommentsData(prev => ({
+                ...prev,
+                [postId]: (prev[postId] || []).filter(c => c.id !== commentId)
+            }));
+
+            setUserPosts(prev => prev.map(p =>
+                p.id === postId ? { ...p, comments_count: Math.max(0, (p.comments_count || 1) - 1) } : p
+            ));
+        } catch (error) {
+            console.error("Error deleting comment:", error);
+        }
+    };
+
+    const toggleComments = (postId) => {
+        if (activeCommentId === postId) {
+            setActiveCommentId(null);
+        } else {
+            setActiveCommentId(postId);
+            fetchComments(postId);
+        }
+    };
+
+    const handleDeletePost = async (postId, mediaUrl) => {
+        try {
+            const { error } = await supabase
+                .from('feeds')
+                .delete()
+                .eq('id', postId);
+
+            if (error) throw error;
+
+            setUserPosts(prev => prev.filter(p => p.id !== postId));
+        } catch (error) {
+            console.error("Error deleting post:", error);
+        }
+    };
 
     if (loading) {
         return (
@@ -214,6 +463,84 @@ export default function PublicProfilePage() {
                                 )}
                             </div>
 
+                        </div>
+
+                        {/* Tabs Switcher */}
+                        <div className="mt-12 border-b border-gray-100 flex items-center gap-8 px-2 overflow-x-auto scrollbar-hide">
+                            <button
+                                onClick={() => setActiveTab("posts")}
+                                className={`pb-3 px-1 font-black text-[15px] transition-all relative shrink-0 ${activeTab === "posts" ? "text-gray-900" : "text-gray-400 hover:text-gray-600"}`}
+                            >
+                                Posts
+                                {activeTab === "posts" && <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#ffc107] rounded-full" />}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("gigs")}
+                                className={`pb-3 px-1 font-black text-[15px] transition-all relative shrink-0 ${activeTab === "gigs" ? "text-gray-900" : "text-gray-400 hover:text-gray-600"}`}
+                            >
+                                Gigs
+                                {activeTab === "gigs" && <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#ffc107] rounded-full" />}
+                            </button>
+                        </div>
+
+                        {/* Tab Content */}
+                        <div className="mt-8">
+                            {loadingContent ? (
+                                <div className="flex justify-center py-12">
+                                    <div className="w-8 h-8 border-4 border-[#ffc107] border-t-transparent rounded-full animate-spin" />
+                                </div>
+                            ) : activeTab === "posts" ? (
+                                <div className="space-y-4">
+                                    {userPosts.length > 0 ? (
+                                        userPosts.map(post => (
+                                            <FeedPostCard
+                                                key={post.id}
+                                                post={post}
+                                                profile={currentUserProfile}
+                                                supabase={supabase}
+                                                onDelete={handleDeletePost}
+                                                onReport={handleReportPost}
+                                                onLike={handleLike}
+                                                activeCommentId={activeCommentId}
+                                                toggleComments={toggleComments}
+                                                commentsData={commentsData}
+                                                commentInputs={commentInputs}
+                                                setCommentInputs={setCommentInputs}
+                                                handleCommentSubmit={handleCommentSubmit}
+                                                handleDeleteComment={handleDeleteComment}
+                                                loadingComments={loadingComments}
+                                            />
+                                        ))
+                                    ) : (
+                                        <div className="py-20 text-center text-gray-400 font-bold">No posts yet.</div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {userGigs.length > 0 ? (
+                                        userGigs.map(gig => (
+                                            <Link
+                                                key={gig.id}
+                                                href={`/dashboard/gigs/detail?id=${gig.id}`}
+                                                className="bg-gray-50/50 rounded-3xl p-6 border border-gray-100 flex flex-col justify-between hover:border-[#ffc107] transition-colors group"
+                                            >
+                                                <div>
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <h4 className="font-black text-gray-900 text-[17px] leading-tight group-hover:text-[#ffc107] transition-colors">{gig.title}</h4>
+                                                        <span className="font-black text-[#ffb300]">¢{gig.price}</span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-600 line-clamp-2 mb-4 font-medium">{gig.description}</p>
+                                                </div>
+                                                <div className="text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                                                    {new Date(gig.created_at).toLocaleDateString()}
+                                                </div>
+                                            </Link>
+                                        ))
+                                    ) : (
+                                        <div className="col-span-full py-20 text-center text-gray-400 font-bold">No gigs yet.</div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
