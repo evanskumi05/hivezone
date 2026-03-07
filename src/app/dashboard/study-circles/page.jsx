@@ -24,7 +24,8 @@ import {
     LockIcon,
     LicenseIcon,
     MoreVerticalIcon,
-    Logout01Icon
+    Logout01Icon,
+    Download01Icon
 } from "@hugeicons/core-free-icons";
 import Avatar from "@/components/ui/Avatar";
 import { useUI } from "@/components/ui/UIProvider";
@@ -42,8 +43,37 @@ const generateInviteCode = () => {
     return Math.random().toString(36).substring(2, 10).toUpperCase();
 };
 
+const downloadFile = async (url, fallbackName = 'attachment') => {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+
+        // Try to extract filename from URL, otherwise use fallback
+        let filename = fallbackName;
+        try {
+            const urlObj = new URL(url);
+            const pathParts = urlObj.pathname.split('/');
+            const lastPart = pathParts[pathParts.length - 1];
+            if (lastPart) filename = decodeURIComponent(lastPart);
+        } catch (e) { }
+
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+        console.error('Download failed:', error);
+        // Fallback to exactly what we had before if fetch fails (e.g., CORS)
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+};
+
 export default function StudyCirclesPage() {
-    const { showToast, confirmAction } = useUI();
+    const { showToast, confirmAction, showImage } = useUI();
     const supabase = createClient();
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState("my"); // "my" or "discover"
@@ -60,7 +90,14 @@ export default function StudyCirclesPage() {
 
     const [newMessage, setNewMessage] = useState("");
     const [messages, setMessages] = useState([]);
+
+    // Attachment State
+    const [selectedAttachment, setSelectedAttachment] = useState(null);
+    const [attachmentPreview, setAttachmentPreview] = useState(null);
+    const [isSending, setIsSending] = useState(false);
+
     const messagesEndRef = useRef(null);
+    const fileInputRef = useRef(null);
 
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
     const menuRef = useRef(null);
@@ -272,6 +309,7 @@ export default function StudyCirclesPage() {
                     id: m.id,
                     sender: m.author?.display_name || "Unknown",
                     text: m.content,
+                    attachment: m.attachment_url,
                     timestamp: formatDate(m.created_at),
                     avatar: m.author?.profile_picture,
                     user_id: m.user_id
@@ -302,6 +340,7 @@ export default function StudyCirclesPage() {
                     id: payload.new.id,
                     sender: authorData?.display_name || "Unknown",
                     text: payload.new.content,
+                    attachment: payload.new.attachment_url,
                     timestamp: formatDate(payload.new.created_at),
                     avatar: authorData?.profile_picture,
                     user_id: payload.new.user_id
@@ -318,11 +357,11 @@ export default function StudyCirclesPage() {
                 // Update last message in sidebar
                 setMyCircles(prev => prev.map(c =>
                     c.id === activeCircleId
-                        ? { ...c, last_message: `${newMsg.sender}: ${newMsg.text}`, last_message_at: payload.new.created_at, timestamp: formatDate(payload.new.created_at) }
+                        ? { ...c, last_message: `${newMsg.sender}: ${newMsg.text || (newMsg.attachment ? 'Sent an attachment' : '')}`, last_message_at: payload.new.created_at, timestamp: formatDate(payload.new.created_at) }
                         : c
                 ).sort((a, b) => new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at)));
 
-                setTimeout(scrollToBottom, 100);
+                setTimeout(scrollToBottom, 500);
             })
             .subscribe();
 
@@ -361,20 +400,39 @@ export default function StudyCirclesPage() {
 
     const openCircle = (id) => {
         setActiveCircleId(id);
+        setSelectedAttachment(null);
+        setAttachmentPreview(null);
         if (isMobileListVisible && window.innerWidth < 768) {
             setIsMobileListVisible(false); // Hide list on mobile
             window.history.pushState({ chatOpen: true }, "", window.location.href);
         }
     };
 
+    const handleAttachmentSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const fileSizeMB = file.size / (1024 * 1024);
+            if (fileSizeMB > 15) {
+                showToast("File size must be less than 15MB.", "error");
+                e.target.value = "";
+                return;
+            }
+            setSelectedAttachment(file);
+            setAttachmentPreview(URL.createObjectURL(file));
+        }
+    };
+
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !profile || !activeCircleId) return;
+        if ((!newMessage.trim() && !selectedAttachment) || !profile || !activeCircleId) return;
+
+        setIsSending(true);
 
         const tempMessage = {
             id: 'temp-' + Date.now(),
             sender: profile.display_name,
-            text: newMessage,
+            text: newMessage || "",
+            attachment: attachmentPreview || null, // Predict the preview url
             timestamp: formatDate(new Date()),
             avatar: profile.profile_picture,
             user_id: profile.id
@@ -386,31 +444,54 @@ export default function StudyCirclesPage() {
         // Sidebar Optimistic update
         setMyCircles(prev => prev.map(c =>
             c.id === activeCircleId
-                ? { ...c, last_message: `You: ${newMessage}`, last_message_at: new Date().toISOString(), timestamp: formatDate(new Date()) }
+                ? { ...c, last_message: `You: ${newMessage || 'Sent an attachment'}`, last_message_at: new Date().toISOString(), timestamp: formatDate(new Date()) }
                 : c
         ).sort((a, b) => new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at)));
 
-        const msgText = newMessage;
+        const msgText = newMessage.trim();
+        const msgAttachmentFile = selectedAttachment;
+
         setNewMessage("");
+        setSelectedAttachment(null);
+        setAttachmentPreview(null);
         setTimeout(scrollToBottom, 100);
+
+        let url = null;
+
+        // Ensure study-circles bucket uses the attachments folder, avoiding collision with profile avatars
+        if (msgAttachmentFile) {
+            const fileExt = msgAttachmentFile.name.split('.').pop();
+            const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
+            const filePath = `attachments/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('study-circles')
+                .upload(filePath, msgAttachmentFile);
+
+            if (uploadError) {
+                showToast("Failed to upload attachment", "error");
+                setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
+                setIsSending(false);
+                return;
+            }
+
+            const { data: urlData } = supabase.storage
+                .from('study-circles')
+                .getPublicUrl(filePath);
+
+            url = urlData.publicUrl;
+        }
 
         const { error } = await supabase
             .from("study_circle_messages")
             .insert({
                 circle_id: activeCircleId,
                 user_id: profile.id,
-                content: msgText
+                content: msgText || "",
+                attachment_url: url
             });
 
-        // Update circle activity in DB (manual sync)
-        await supabase
-            .from("study_circles")
-            .update({
-                last_message: `${profile.display_name}: ${msgText}`,
-                last_message_at: new Date().toISOString()
-            })
-            .eq("id", activeCircleId);
-
+        setIsSending(false);
         if (error) {
             showToast("Failed to send message", "error");
             // Remove temp message on error
@@ -787,13 +868,58 @@ export default function StudyCirclesPage() {
                                                         {showAvatar && !isMe && (
                                                             <span className="text-[11px] font-bold text-gray-500 ml-1 mb-1">{msg.sender}</span>
                                                         )}
-                                                        <div className={`px-4 py-3 rounded-2xl shadow-sm ${isMe
+                                                        <div className={`px-4 py-3 rounded-2xl shadow-sm overflow-hidden flex flex-col gap-2 ${isMe
                                                             ? 'bg-[#ffc107] text-black rounded-tr-sm'
                                                             : 'bg-white border border-gray-100 text-gray-900 rounded-tl-sm'
                                                             }`}>
-                                                            <p className="text-[14px] font-medium leading-relaxed">
-                                                                {msg.text}
-                                                            </p>
+                                                            {/* Render Attachment if exists */}
+                                                            {msg.attachment && (
+                                                                <div className="max-w-[250px] md:max-w-sm overflow-hidden rounded-xl">
+                                                                    {msg.attachment.match(/\.(jpeg|jpg|gif|png)$/i) || msg.attachment.startsWith('blob:') ? (
+                                                                        <img
+                                                                            src={msg.attachment}
+                                                                            alt="Attachment"
+                                                                            className="w-full h-auto object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                                                                            onClick={() => showImage(msg.attachment, "Attachment")}
+                                                                        />
+                                                                    ) : (
+                                                                        <div
+                                                                            onClick={() => downloadFile(msg.attachment, `attachment-${msg.id}`)}
+                                                                            className={`flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-90 transition-opacity ${isMe ? 'bg-black/5 border-black/10 text-black' : 'bg-gray-50 border-gray-100 text-gray-800'}`}
+                                                                        >
+                                                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                                                <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${isMe ? 'bg-white/40' : 'bg-white shadow-sm'}`}>
+                                                                                    <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 opacity-70" />
+                                                                                </div>
+                                                                                <div className="flex flex-col overflow-hidden">
+                                                                                    <span className="text-sm font-bold truncate max-w-[150px]">
+                                                                                        {(() => {
+                                                                                            try {
+                                                                                                const urlObj = new URL(msg.attachment);
+                                                                                                const pathParts = urlObj.pathname.split('/');
+                                                                                                const lastPart = pathParts[pathParts.length - 1];
+                                                                                                const cleanName = decodeURIComponent(lastPart).replace(/^[^-]+-\d+\./, '');
+                                                                                                return cleanName || 'Document';
+                                                                                            } catch (e) {
+                                                                                                return 'Document';
+                                                                                            }
+                                                                                        })()}
+                                                                                    </span>
+                                                                                    <span className="text-[10px] opacity-60 uppercase">{msg.attachment.split('.').pop() || 'FILE'}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center border ${isMe ? 'border-black/10 text-black' : 'border-gray-200 text-gray-500'}`}>
+                                                                                <HugeiconsIcon icon={Download01Icon} className="w-4 h-4" />
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                            {msg.text && (
+                                                                <p className="text-[14px] font-medium leading-relaxed">
+                                                                    {msg.text}
+                                                                </p>
+                                                            )}
                                                         </div>
                                                         <span className={`text-[10px] text-gray-400 font-medium mt-1 px-1 ${isMe ? 'text-right' : 'text-left'}`}>
                                                             {msg.timestamp}
@@ -830,6 +956,28 @@ export default function StudyCirclesPage() {
                             {/* Message Input Box (Only show if in My Circles) */}
                             {activeTab === "my" && (
                                 <div className="p-3 md:p-4 bg-white border-t border-gray-100 shrink-0 pb-4 md:pb-4 z-10">
+                                    {/* Attachment Preview Container */}
+                                    {attachmentPreview && (
+                                        <div className="mb-3 px-2 flex">
+                                            <div className="relative inline-block border border-gray-200 rounded-xl overflow-hidden bg-gray-50 p-1 pr-8">
+                                                {selectedAttachment?.type.startsWith('image/') ? (
+                                                    <img src={attachmentPreview} alt="Preview" className="h-20 w-auto rounded-lg object-cover" />
+                                                ) : (
+                                                    <div className="flex items-center gap-3 px-3 py-2">
+                                                        <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 text-gray-500" />
+                                                        <span className="text-sm font-medium text-gray-700 max-w-[150px] truncate">{selectedAttachment?.name}</span>
+                                                    </div>
+                                                )}
+                                                <button
+                                                    onClick={() => { setSelectedAttachment(null); setAttachmentPreview(null); }}
+                                                    className="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-black text-white rounded-full flex items-center justify-center transition-colors"
+                                                >
+                                                    <HugeiconsIcon icon={Cancel01Icon} className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <form
                                         onSubmit={handleSendMessage}
                                         className="flex items-end gap-2 bg-gray-50 border border-gray-200 rounded-[1.5rem] p-2 pl-4 focus-within:border-[#ffc107] focus-within:bg-white focus-within:shadow-sm transition-all"
@@ -850,15 +998,37 @@ export default function StudyCirclesPage() {
                                         />
 
                                         <div className="flex items-center gap-1 pb-1">
-                                            <button type="button" className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 transition-colors">
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                onChange={handleAttachmentSelect}
+                                                className="hidden"
+                                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => fileInputRef.current.click()}
+                                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 transition-colors"
+                                            >
                                                 <HugeiconsIcon icon={Attachment01Icon} className="w-4 h-4" />
                                             </button>
-                                            <button type="button" className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 transition-colors">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    fileInputRef.current.accept = "image/*";
+                                                    fileInputRef.current.click();
+                                                    // Reset back after a delay just in case
+                                                    setTimeout(() => {
+                                                        if (fileInputRef.current) fileInputRef.current.accept = "image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip";
+                                                    }, 1000);
+                                                }}
+                                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 transition-colors"
+                                            >
                                                 <HugeiconsIcon icon={Image01Icon} className="w-4 h-4" />
                                             </button>
                                             <button
                                                 type="submit"
-                                                disabled={!newMessage.trim()}
+                                                disabled={isSending || (!newMessage.trim() && !selectedAttachment)}
                                                 className="w-10 h-10 flex items-center justify-center rounded-full bg-black text-white hover:bg-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed ml-1"
                                             >
                                                 <HugeiconsIcon icon={SentIcon} className="w-4 h-4" />

@@ -11,7 +11,11 @@ import {
     Tick02Icon,
     TickDouble02Icon,
     SentIcon,
-    Delete01Icon
+    Delete01Icon,
+    Attachment01Icon,
+    Image01Icon,
+    Cancel01Icon,
+    Download01Icon
 } from "@hugeicons/core-free-icons";
 import ChatSidebar from "@/components/dashboard/ChatSidebar";
 import { MessageSkeleton } from "@/components/ui/Skeleton";
@@ -19,6 +23,33 @@ import { useUI } from "@/components/ui/UIProvider";
 import { useChatConfig } from "@/components/providers/ChatProvider";
 import Avatar from "@/components/ui/Avatar";
 import { getDisplayName } from "@/utils/stringUtils";
+
+const downloadFile = async (url, fallbackName = 'attachment') => {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+
+        let filename = fallbackName;
+        try {
+            const urlObj = new URL(url);
+            const pathParts = urlObj.pathname.split('/');
+            const lastPart = pathParts[pathParts.length - 1];
+            if (lastPart) filename = decodeURIComponent(lastPart);
+        } catch (e) { }
+
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+        console.error('Download failed:', error);
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+};
 
 export default function ChatWindowPage() {
     const { id } = useParams();
@@ -29,9 +60,14 @@ export default function ChatWindowPage() {
     const [newMessage, setNewMessage] = useState("");
     const [loading, setLoading] = useState(true);
     const scrollRef = useRef(null);
+    const fileInputRef = useRef(null);
     const supabase = createClient();
-    const { confirmAction, showToast, openReportModal } = useUI();
+    const { confirmAction, showToast, openReportModal, showImage } = useUI();
     const { setActiveConversation, refreshUnreadCount } = useChatConfig();
+
+    const [selectedAttachment, setSelectedAttachment] = useState(null);
+    const [attachmentPreview, setAttachmentPreview] = useState(null);
+    const [isSending, setIsSending] = useState(false);
 
     // Register this chat as the active conversation so the global provider
     // skips incrementing unread counts for messages arriving here
@@ -117,7 +153,7 @@ export default function ChatWindowPage() {
                             const optimisticMatch = prev.find(m =>
                                 m.id.toString().startsWith('temp-') &&
                                 m.sender_id === payload.new.sender_id &&
-                                m.content === payload.new.content
+                                (m.content === payload.new.content || (!m.content && !payload.new.content && m.attachment_url))
                             );
 
                             if (optimisticMatch) {
@@ -190,12 +226,27 @@ export default function ChatWindowPage() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [router]);
 
+    const handleAttachmentSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const fileSizeMB = file.size / (1024 * 1024);
+            if (fileSizeMB > 15) {
+                showToast("File size must be less than 15MB.", "error");
+                e.target.value = "";
+                return;
+            }
+            setSelectedAttachment(file);
+            setAttachmentPreview(URL.createObjectURL(file));
+        }
+    };
+
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !currentUser) return;
+        if ((!newMessage.trim() && !selectedAttachment) || !currentUser) return;
+
+        setIsSending(true);
 
         const content = newMessage.trim();
-        setNewMessage("");
 
         // OPTIMISTIC UI: Instantly add the message to the view
         const tempId = `temp-${Date.now()}`;
@@ -203,21 +254,55 @@ export default function ChatWindowPage() {
             id: tempId,
             conversation_id: id,
             sender_id: currentUser.id,
-            content: content,
+            content: content || "",
+            attachment_url: attachmentPreview || null,
             created_at: new Date().toISOString(),
             is_read: false
         };
 
         setMessages(prev => [...prev, optimisticMsg]);
 
+        const msgAttachmentFile = selectedAttachment;
+
+        setNewMessage("");
+        setSelectedAttachment(null);
+        setAttachmentPreview(null);
+
+        let url = null;
+
+        if (msgAttachmentFile) {
+            const fileExt = msgAttachmentFile.name.split('.').pop();
+            const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
+            const filePath = `chat-attachments/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('chat-attachments')
+                .upload(filePath, msgAttachmentFile);
+
+            if (uploadError) {
+                showToast("Failed to upload attachment", "error");
+                setMessages(prev => prev.filter(m => m.id !== tempId));
+                setIsSending(false);
+                return;
+            }
+
+            const { data: urlData } = supabase.storage
+                .from('chat-attachments')
+                .getPublicUrl(filePath);
+
+            url = urlData.publicUrl;
+        }
+
         const { error } = await supabase
             .from('messages')
             .insert({
                 conversation_id: id,
                 sender_id: currentUser.id,
-                content: content
+                content: content || "",
+                attachment_url: url
             });
 
+        setIsSending(false);
         if (error) {
             console.error("Error sending message:", error);
             // Revert optimistic update on failure
@@ -227,7 +312,7 @@ export default function ChatWindowPage() {
             await supabase
                 .from('conversations')
                 .update({
-                    last_message: content,
+                    last_message: content || (url ? 'Sent an attachment' : ''),
                     updated_at: new Date().toISOString(),
                     hidden_by: []
                 })
@@ -420,11 +505,58 @@ export default function ChatWindowPage() {
                                             </button>
                                         )}
 
-                                        <div className={`px-5 py-3 rounded-[1.5rem] shadow-sm text-sm font-medium ${isMe
+                                        <div className={`px-5 py-3 rounded-[1.5rem] shadow-sm text-sm font-medium overflow-hidden flex flex-col gap-2 ${isMe
                                             ? 'bg-[#ffc107] text-black rounded-tr-none'
                                             : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
                                             }`}>
-                                            {msg.content}
+                                            {/* Render Attachment if exists */}
+                                            {msg.attachment_url && (
+                                                <div className="max-w-[250px] md:max-w-sm overflow-hidden rounded-xl">
+                                                    {msg.attachment_url.match(/\.(jpeg|jpg|gif|png)$/i) || msg.attachment_url.startsWith('blob:') ? (
+                                                        <img
+                                                            src={msg.attachment_url}
+                                                            alt="Attachment"
+                                                            className="w-full h-auto object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                                                            onClick={() => showImage(msg.attachment_url, "Attachment")}
+                                                        />
+                                                    ) : (
+                                                        <div
+                                                            onClick={() => downloadFile(msg.attachment_url, `attachment-${msg.id}`)}
+                                                            className={`flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-90 transition-opacity ${isMe ? 'bg-black/5 border-black/10 text-black' : 'bg-gray-50 border-gray-100 text-gray-800'}`}
+                                                        >
+                                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                                <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${isMe ? 'bg-white/40' : 'bg-white shadow-sm'}`}>
+                                                                    <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 opacity-70" />
+                                                                </div>
+                                                                <div className="flex flex-col overflow-hidden">
+                                                                    <span className="text-sm font-bold truncate max-w-[150px]">
+                                                                        {(() => {
+                                                                            try {
+                                                                                const urlObj = new URL(msg.attachment_url);
+                                                                                const pathParts = urlObj.pathname.split('/');
+                                                                                const lastPart = pathParts[pathParts.length - 1];
+                                                                                // Remove the timestamp/user id prefix if it exists to just show the real name
+                                                                                const cleanName = decodeURIComponent(lastPart).replace(/^[^-]+-\d+\./, '');
+                                                                                return cleanName || 'Document';
+                                                                            } catch (e) {
+                                                                                return 'Document';
+                                                                            }
+                                                                        })()}
+                                                                    </span>
+                                                                    <span className="text-[10px] opacity-60 uppercase">{msg.attachment_url.split('.').pop() || 'FILE'}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center border ${isMe ? 'border-black/10 text-black' : 'border-gray-200 text-gray-500'}`}>
+                                                                <HugeiconsIcon icon={Download01Icon} className="w-4 h-4" />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {msg.content && (
+                                                <p className="whitespace-pre-wrap">{msg.content}</p>
+                                            )}
                                             <div className={`text-[10px] mt-1 opacity-50 flex items-center justify-end ${isMe ? 'text-black' : 'text-gray-500'}`}>
                                                 {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 {isMe && (
@@ -444,27 +576,84 @@ export default function ChatWindowPage() {
                     </div>
 
                     {/* Input Area */}
-                    <form
-                        onSubmit={handleSendMessage}
-                        className="fixed md:relative bottom-[64px] md:bottom-auto left-0 right-0 md:left-auto md:right-auto p-4 md:p-6 md:pt-0 shrink-0 bg-white/90 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none border-t border-gray-100 md:border-none z-10"
-                    >
-                        <div className="relative flex items-center bg-gray-50 rounded-[2rem] border border-gray-100 p-1.5 focus-within:border-[#ffc107]/50 focus-within:ring-4 focus-within:ring-[#ffc107]/5 transition-all shadow-sm">
-                            <input
-                                type="text"
+                    <div className="fixed md:relative bottom-[64px] md:bottom-auto left-0 right-0 md:left-auto md:right-auto p-4 md:p-6 md:pt-0 shrink-0 bg-white/90 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none border-t border-gray-100 md:border-none z-10">
+                        {/* Attachment Preview Container */}
+                        {attachmentPreview && (
+                            <div className="mb-3 px-2 flex">
+                                <div className="relative inline-block border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm p-1 pr-8">
+                                    {selectedAttachment?.type.startsWith('image/') ? (
+                                        <img src={attachmentPreview} alt="Preview" className="h-20 w-auto rounded-lg object-cover" />
+                                    ) : (
+                                        <div className="flex items-center gap-3 px-3 py-2">
+                                            <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5 text-gray-500" />
+                                            <span className="text-sm font-medium text-gray-700 max-w-[150px] truncate">{selectedAttachment?.name}</span>
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={() => { setSelectedAttachment(null); setAttachmentPreview(null); }}
+                                        className="absolute top-1 right-1 w-6 h-6 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full flex items-center justify-center transition-colors"
+                                    >
+                                        <HugeiconsIcon icon={Cancel01Icon} className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        <form
+                            onSubmit={handleSendMessage}
+                            className="relative flex items-end bg-gray-50 rounded-[2rem] border border-gray-100 p-1.5 pl-3 focus-within:border-[#ffc107]/50 focus-within:ring-4 focus-within:ring-[#ffc107]/5 transition-all shadow-sm"
+                        >
+                            <textarea
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
                                 placeholder="Message..."
-                                className="flex-1 bg-transparent border-none outline-none px-5 py-3 text-[14px] font-medium placeholder:text-gray-400"
+                                className="flex-1 bg-transparent border-none outline-none px-3 py-3.5 text-[14px] font-medium placeholder:text-gray-400 resize-none max-h-32"
+                                rows={1}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSendMessage(e);
+                                    }
+                                }}
                             />
-                            <button
-                                type="submit"
-                                disabled={!newMessage.trim()}
-                                className="size-12 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none shrink-0"
-                            >
-                                <HugeiconsIcon icon={SentIcon} size={20} />
-                            </button>
-                        </div>
-                    </form>
+
+                            <div className="flex items-center gap-1 pb-1">
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleAttachmentSelect}
+                                    className="hidden"
+                                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current.click()}
+                                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 transition-colors"
+                                >
+                                    <HugeiconsIcon icon={Attachment01Icon} className="w-5 h-5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        fileInputRef.current.accept = "image/*";
+                                        fileInputRef.current.click();
+                                        setTimeout(() => {
+                                            if (fileInputRef.current) fileInputRef.current.accept = "image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip";
+                                        }, 1000);
+                                    }}
+                                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 transition-colors"
+                                >
+                                    <HugeiconsIcon icon={Image01Icon} className="w-5 h-5" />
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSending || (!newMessage.trim() && !selectedAttachment)}
+                                    className="size-11 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none shrink-0"
+                                >
+                                    <HugeiconsIcon icon={SentIcon} size={20} />
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
             </div>

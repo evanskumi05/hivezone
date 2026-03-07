@@ -5,99 +5,75 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
     UserGroupIcon,
     Briefcase02Icon,
-    BankIcon,
-    AlertIcon,
-    ArrowRight01Icon,
-    PlusSignIcon
+    Mortarboard01Icon,
+    Alert01Icon,
+    ArrowRight01Icon
 } from "@hugeicons/core-free-icons";
 
 export default function AdminDashboard() {
     const stats = [
-        { label: "Total Users", value: "1,284", icon: UserGroupIcon, color: "bg-blue-50 text-blue-600" },
-        { label: "Active Internships", value: "24", icon: Briefcase02Icon, color: "bg-purple-50 text-purple-600" },
-        { label: "Scholarships", value: "15", icon: BankIcon, color: "bg-green-50 text-green-600" },
-        { label: "Unresolved Reports", value: "8", icon: AlertIcon, color: "bg-red-50 text-red-600" },
+        { label: "Total Users", value: "10,547", icon: UserGroupIcon, color: "text-[#ffc107]" },
+        { label: "Active Internships", value: "99", icon: Briefcase02Icon, color: "text-pink-500" },
+        { label: "Scholarships", value: "150", icon: Mortarboard01Icon, color: "text-blue-500" },
+        { label: "Unresolved Reports", value: "4", icon: Alert01Icon, color: "text-red-500" },
     ];
 
     const recentActivities = [
-        { date: "2 mins ago", user: "John Doe", activity: "reported a gig for spam", status: "pending" },
-        { date: "1 hour ago", user: "Sarah Smith", activity: "applied for Paystack Internship", status: "processed" },
-        { date: "3 hours ago", user: "Admin", activity: "added new MTN Scholarship", status: "completed" },
+        { date: "2 mins ago", user: "John Doe", activity: "reported a gig for spam", status: "UNDER REVIEW", statusColor: "text-red-500", avatarColor: "border-[#ffc107] text-gray-900", initial: "J" },
+        { date: "2 mins ago", user: "Sarah Willey", activity: "applied for Paystack Internships", status: "PROCESSED", statusColor: "text-blue-600", avatarColor: "border-green-500 text-gray-900", initial: "S" },
+        { date: "2 mins ago", user: "Netskiper", activity: "reported a feed to be harassment", status: "UNDER REVIEW", statusColor: "text-red-500", avatarColor: "border-red-500 text-gray-900", initial: "n" },
+        { date: "2 mins ago", user: "Admin", activity: "added MTN Scholarship 2026", status: "COMPLETED", statusColor: "text-gray-900", avatarColor: "border-pink-500 text-gray-900", initial: "A" },
     ];
 
     return (
-        <div className="space-y-10">
+        <div className="space-y-8 flex flex-col h-full min-h-0 pb-0">
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, idx) => (
-                    <div key={idx} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col gap-4">
-                        <div className={`w-12 h-12 ${stat.color} rounded-2xl flex items-center justify-center`}>
-                            <HugeiconsIcon icon={stat.icon} className="w-6 h-6" />
+            <div className="bg-white rounded-[2rem] p-8 shrink-0 shadow-sm border border-gray-100">
+                <div className="grid grid-cols-4 gap-8">
+                    {stats.map((stat, idx) => (
+                        <div key={idx} className="flex flex-col items-center justify-center text-center">
+                            <div className={`mb-3 flex items-center justify-center`}>
+                                <HugeiconsIcon icon={stat.icon} className={`w-8 h-8 ${stat.color} stroke-[1.5]`} />
+                            </div>
+                            <p className="text-gray-500 font-bold text-xs mb-2">{stat.label}</p>
+                            <h3 className="text-4xl font-extrabold font-newyork text-gray-900 tracking-tight">{stat.value}</h3>
                         </div>
-                        <div>
-                            <p className="text-zinc-500 font-bold text-sm tracking-tight">{stat.label}</p>
-                            <h3 className="text-3xl font-black font-newyork mt-1">{stat.value}</h3>
-                        </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Recent Activity */}
-                <div className="lg:col-span-2 bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="px-8 py-6 border-b border-gray-50 flex items-center justify-between">
-                        <h3 className="text-xl font-black font-newyork">Recent Activity</h3>
-                        <button className="text-[#ffc107] font-black text-sm flex items-center gap-1">
-                            View all <HugeiconsIcon icon={ArrowRight01Icon} className="w-4 h-4" />
-                        </button>
-                    </div>
-                    <div className="divide-y divide-gray-50">
-                        {recentActivities.map((activity, idx) => (
-                            <div key={idx} className="px-8 py-5 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm font-black">
-                                        {activity.user.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-sm">
-                                            <span className="text-black">{activity.user}</span>
-                                            <span className="text-zinc-500 font-medium"> {activity.activity}</span>
-                                        </p>
-                                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">{activity.date}</span>
-                                    </div>
+            {/* Recent Activity Card */}
+            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col flex-1 shrink-0 min-h-[400px]">
+                <div className="px-10 py-8 flex items-center justify-between shrink-0">
+                    <h3 className="text-xl font-extrabold font-newyork text-gray-900">Recent Activity</h3>
+                    <button className="text-[#ffc107] font-bold text-sm flex items-center gap-1.5 group">
+                        View all <HugeiconsIcon icon={ArrowRight01Icon} className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                </div>
+
+                <div className="px-10 pb-10 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
+                    {recentActivities.map((activity, idx) => (
+                        <div key={idx} className="flex items-center justify-between group">
+                            <div className="flex items-center gap-5">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 ${activity.avatarColor}`}>
+                                    {activity.initial}
                                 </div>
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${activity.status === 'pending' ? 'bg-red-50 text-red-600' :
-                                        activity.status === 'processed' ? 'bg-blue-50 text-blue-600' :
-                                            'bg-green-50 text-green-600'
-                                    }`}>
+                                <div className="flex flex-col">
+                                    <p className="text-sm">
+                                        <span className="text-gray-900 font-extrabold">{activity.user}</span>
+                                        <span className="text-gray-500 font-medium ml-1.5">{activity.activity}</span>
+                                    </p>
+                                    <span className="text-xs text-gray-400 font-medium mt-1">{activity.date}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center shrink-0 ml-4">
+                                <span className={`text-[10px] sm:text-xs font-black tracking-widest uppercase ${activity.statusColor}`}>
                                     {activity.status}
                                 </span>
                             </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="bg-black text-white rounded-[2.5rem] p-8 shadow-xl flex flex-col gap-6">
-                    <h3 className="text-xl font-black font-newyork mb-2">Quick Actions</h3>
-                    <div className="space-y-4">
-                        <button className="w-full bg-[#ffc107] text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform">
-                            <HugeiconsIcon icon={PlusSignIcon} className="w-5 h-5" />
-                            Add Internship
-                        </button>
-                        <button className="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform">
-                            <HugeiconsIcon icon={PlusSignIcon} className="w-5 h-5" />
-                            Add Scholarship
-                        </button>
-                        <button className="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform">
-                            <HugeiconsIcon icon={UserGroupIcon} className="w-5 h-5" />
-                            User Management
-                        </button>
-                    </div>
-                    <div className="mt-auto pt-6 border-t border-zinc-700">
-                        <p className="text-zinc-400 text-xs font-medium">System Version: v1.0.4-beta</p>
-                        <p className="text-zinc-400 text-xs font-medium">Environment: Production</p>
-                    </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
