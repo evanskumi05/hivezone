@@ -518,7 +518,7 @@ function SearchResults() {
                                                     {gig.location}
                                                 </div>
                                                 {gig.expected_due_date && (
-                                                    <div className="flex items-center gap-2 text-xs text-gray-600 font-semibold">
+                                                    <div className="flex items-center gap-2 text-xs text-orange-500 font-semibold">
                                                         <HugeiconsIcon icon={Calendar01Icon} className="w-4 h-4 text-orange-500" />
                                                         Due: {new Date(gig.expected_due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                                     </div>

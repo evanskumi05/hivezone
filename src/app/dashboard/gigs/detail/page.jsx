@@ -298,10 +298,10 @@ function GigDetailContent() {
                             {gig.expected_due_date && (
                                 <div className="flex items-center gap-3 text-sm font-bold border-t border-gray-100/50 pt-2 -mx-2 px-2">
                                     <div className="w-6 h-6 rounded-md bg-[#ffc107]/20 flex items-center justify-center shrink-0">
-                                        <HugeiconsIcon icon={Calendar01Icon} className="w-4 h-4 text-orange-600" />
+                                        <HugeiconsIcon icon={Calendar01Icon} className="w-4 h-4 text-orange-500" />
                                     </div>
                                     <span className="text-gray-900 font-extrabold text-[13px]">
-                                        Due <span className="text-orange-600">{new Date(gig.expected_due_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                        Due <span className="text-orange-500">{new Date(gig.expected_due_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                                     </span>
                                 </div>
                             )}

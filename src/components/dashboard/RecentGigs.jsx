@@ -116,7 +116,7 @@ const RecentGigs = () => {
                                     {gig.title}
                                 </span>
                                 {gig.expected_due_date && (
-                                    <span className="text-[9px] font-black text-orange-700 bg-orange-100/50 px-2 py-0.5 rounded-full inline-block mt-0.5 capitalize w-max border border-orange-200/50">
+                                    <span className="text-[9px] font-black text-orange-500 bg-orange-100/50 px-2 py-0.5 rounded-full inline-block mt-0.5 capitalize w-max border border-orange-200/50">
                                         Due: {new Date(gig.expected_due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                     </span>
                                 )}

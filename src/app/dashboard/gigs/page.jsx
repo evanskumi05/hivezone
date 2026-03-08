@@ -211,7 +211,7 @@ export default function GigsPage() {
                                     {gigs[0].expected_due_date && (
                                         <div className="flex items-center gap-1.5 sm:flex-col sm:gap-1 mt-2 sm:mt-2 text-[11px] sm:text-[10px] font-medium leading-tight text-left sm:text-center">
                                             <HugeiconsIcon icon={Calendar01Icon} className="w-4 h-4 text-orange-500" />
-                                            <span className="mt-0 sm:mt-0 font-bold text-orange-600">Due {new Date(gigs[0].expected_due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                            <span className="mt-0 sm:mt-0 font-bold text-orange-500">Due {new Date(gigs[0].expected_due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                         </div>
                                     )}
                                 </div>
@@ -313,7 +313,7 @@ export default function GigsPage() {
                                     {gig.location}
                                 </div>
                                 {gig.expected_due_date && (
-                                    <div className="flex items-center gap-2 text-xs text-orange-600 font-semibold">
+                                    <div className="flex items-center gap-2 text-xs text-orange-500 font-semibold">
                                         <HugeiconsIcon icon={Calendar01Icon} className="w-4 h-4" />
                                         Due {new Date(gig.expected_due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </div>
