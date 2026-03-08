@@ -111,10 +111,15 @@ const RecentGigs = () => {
                                 {gig.author?.year_of_study || "Campus"}
                             </span>
 
-                            <div className="flex-grow flex flex-col justify-center mb-4 min-h-[40px]">
-                                <span className="text-[11px] font-bold leading-tight text-gray-900 line-clamp-2 group-hover:underline">
+                            <div className="flex-grow flex flex-col justify-center mb-4 min-h-[40px] items-center">
+                                <span className="text-[11px] font-bold leading-tight text-gray-900 line-clamp-2 group-hover:underline mb-1">
                                     {gig.title}
                                 </span>
+                                {gig.expected_due_date && (
+                                    <span className="text-[9px] font-black text-orange-700 bg-orange-100/50 px-2 py-0.5 rounded-full inline-block mt-0.5 capitalize w-max border border-orange-200/50">
+                                        Due: {new Date(gig.expected_due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                    </span>
+                                )}
                             </div>
 
                             <span className="font-extrabold text-gray-900 text-lg">¢{gig.price}</span>

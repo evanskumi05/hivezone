@@ -14,7 +14,8 @@ import {
     Location01Icon,
     Message01Icon,
     CheckmarkBadge01Icon,
-    Cancel01Icon
+    Cancel01Icon,
+    Calendar01Icon
 } from "@hugeicons/core-free-icons";
 import CustomDropdown from "@/components/CustomDropdown";
 
@@ -207,6 +208,12 @@ export default function GigsPage() {
                                             <span className="mt-0 sm:mt-1 font-bold text-gray-700">{gigs[0].location}</span>
                                         </div>
                                     </div>
+                                    {gigs[0].expected_due_date && (
+                                        <div className="flex items-center gap-1.5 sm:flex-col sm:gap-1 mt-2 sm:mt-2 text-[11px] sm:text-[10px] font-medium leading-tight text-left sm:text-center">
+                                            <HugeiconsIcon icon={Calendar01Icon} className="w-4 h-4 text-orange-500" />
+                                            <span className="mt-0 sm:mt-0 font-bold text-orange-600">Due {new Date(gigs[0].expected_due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div
@@ -305,6 +312,12 @@ export default function GigsPage() {
                                     <HugeiconsIcon icon={Location01Icon} className="w-4 h-4" />
                                     {gig.location}
                                 </div>
+                                {gig.expected_due_date && (
+                                    <div className="flex items-center gap-2 text-xs text-orange-600 font-semibold">
+                                        <HugeiconsIcon icon={Calendar01Icon} className="w-4 h-4" />
+                                        Due {new Date(gig.expected_due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </div>
+                                )}
                                 <div className="flex flex-wrap gap-2">
                                     {gig.tags && gig.tags.map((tag, idx) => (
                                         <span key={idx} className="bg-gray-100 text-gray-800 text-[11px] font-bold px-3 py-1 rounded-full">

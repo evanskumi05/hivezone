@@ -40,6 +40,7 @@ export default function PostGigPage() {
     const [category, setCategory] = useState("");
     const [location, setLocation] = useState("");
     const [tags, setTags] = useState("");
+    const [expectedDueDate, setExpectedDueDate] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
@@ -95,6 +96,7 @@ export default function PostGigPage() {
                 category: categoryMap[category],
                 location,
                 tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ""),
+                expected_due_date: expectedDueDate || null,
                 image_url: imageUrl,
                 user_id: session.user.id
             };
@@ -191,7 +193,7 @@ export default function PostGigPage() {
                 </div>
 
                 {/* Location & Tags Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                         <label className="block text-sm font-semibold text-gray-900 mb-2">Location</label>
                         <input
@@ -212,6 +214,16 @@ export default function PostGigPage() {
                             value={tags}
                             onChange={(e) => setTags(e.target.value)}
                             className="w-full bg-transparent border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#ffc107] transition-colors"
+                            disabled={isSubmitting}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">Expected Due Date</label>
+                        <input
+                            type="date"
+                            value={expectedDueDate}
+                            onChange={(e) => setExpectedDueDate(e.target.value)}
+                            className="w-full bg-transparent border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#ffc107] transition-colors text-gray-700"
                             disabled={isSubmitting}
                         />
                     </div>

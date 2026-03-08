@@ -9,7 +9,8 @@ import {
     ArrowRight01Icon,
     Cancel01Icon,
     Location01Icon,
-    Message01Icon
+    Message01Icon,
+    Calendar01Icon
 } from "@hugeicons/core-free-icons";
 import Link from 'next/link';
 import Avatar from '@/components/ui/Avatar';
@@ -424,8 +425,8 @@ function SearchResults() {
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`flex-1 pb-3 text-center text-sm font-bold transition-all border-b-2 capitalize ${activeTab === tab
-                                    ? 'border-[#ffc107] text-gray-900'
-                                    : 'border-transparent text-gray-400 hover:text-gray-600'
+                                ? 'border-[#ffc107] text-gray-900'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
                                 }`}
                         >
                             {tab}
@@ -516,6 +517,12 @@ function SearchResults() {
                                                     <HugeiconsIcon icon={Location01Icon} className="w-4 h-4" />
                                                     {gig.location}
                                                 </div>
+                                                {gig.expected_due_date && (
+                                                    <div className="flex items-center gap-2 text-xs text-gray-600 font-semibold">
+                                                        <HugeiconsIcon icon={Calendar01Icon} className="w-4 h-4 text-orange-500" />
+                                                        Due: {new Date(gig.expected_due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    </div>
+                                                )}
                                                 <div className="flex flex-wrap gap-2">
                                                     {gig.tags && gig.tags.map((tag, idx) => (
                                                         <span key={idx} className="bg-gray-100 text-gray-800 text-[11px] font-bold px-3 py-1 rounded-full">
