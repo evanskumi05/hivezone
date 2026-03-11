@@ -36,7 +36,7 @@ export default function AutoPauseVideo({ src, className, ...props }) {
 
     return (
         <div
-            className="w-full relative group cursor-pointer"
+            className="w-full h-full relative group cursor-pointer flex items-center justify-center"
             onClick={props.onClick}
         >
             <video
@@ -48,9 +48,9 @@ export default function AutoPauseVideo({ src, className, ...props }) {
                 {...props}
             />
             {/* Play Button Overlay */}
-            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center pointer-events-none">
-                <div className="w-16 h-16 rounded-full bg-[#ffc107]/90 backdrop-blur-md flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-all duration-300">
-                    <HugeiconsIcon icon={PlayIcon} className="w-8 h-8 text-black ml-1" />
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center pointer-events-none z-30">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-[#ffc107]/90 backdrop-blur-md flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-all duration-300">
+                    <HugeiconsIcon icon={PlayIcon} className="w-6 h-6 sm:w-8 sm:h-8 text-black ml-1" />
                 </div>
             </div>
         </div>
