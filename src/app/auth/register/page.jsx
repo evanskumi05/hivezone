@@ -41,8 +41,21 @@ const RegisterPage = () => {
         e.preventDefault();
         setError(null);
 
-        if (!firstName || !lastName || !username || !email || !password) {
+        // Sanitize inputs
+        const cleanFirstName = firstName.trim();
+        const cleanLastName = lastName.trim();
+        const cleanUsername = username.trim().toLowerCase();
+        const cleanEmail = email.trim().toLowerCase();
+
+        if (!cleanFirstName || !cleanLastName || !cleanUsername || !cleanEmail || !password) {
             setError("Please fill in all fields.");
+            return;
+        }
+
+        // Username validation: 3-20 characters, alphanumeric and underscores only
+        const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+        if (!usernameRegex.test(cleanUsername)) {
+            setError("Username must be 3-20 characters long and can only contain letters, numbers, and underscores.");
             return;
         }
 
@@ -67,8 +80,8 @@ const RegisterPage = () => {
         // 0. Pre-check for unique username and email securely via RPC
         const { data: existsData, error: checkError } = await supabase
             .rpc('check_user_exists', {
-                p_username: username,
-                p_email: email
+                p_username: cleanUsername,
+                p_email: cleanEmail
             });
 
         if (checkError) {
@@ -93,15 +106,15 @@ const RegisterPage = () => {
 
         // 1. Sign up with Supabase Auth
         const { data: authData, error: authError } = await supabase.auth.signUp({
-            email,
+            email: cleanEmail,
             password,
             options: {
                 // Email confirmation is highly recommended in production
                 // We're passing the user data to be handled by our database trigger or manually inserted
                 data: {
-                    first_name: firstName,
-                    last_name: lastName,
-                    username: username,
+                    first_name: cleanFirstName,
+                    last_name: cleanLastName,
+                    username: cleanUsername,
                 }
             }
         });
@@ -118,9 +131,9 @@ const RegisterPage = () => {
             const { error: updateError } = await supabase
                 .from('users')
                 .update({
-                    first_name: firstName,
-                    last_name: lastName,
-                    username: username,
+                    first_name: cleanFirstName,
+                    last_name: cleanLastName,
+                    username: cleanUsername,
                     is_onboarded: false
                 })
                 .eq('id', authData.user.id);
