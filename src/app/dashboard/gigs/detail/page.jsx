@@ -20,6 +20,7 @@ import {
     Alert02Icon,
     Calendar01Icon
 } from "@hugeicons/core-free-icons";
+import Linkify from "@/components/ui/Linkify";
 
 function GigDetailContent() {
     const router = useRouter();
@@ -246,9 +247,10 @@ function GigDetailContent() {
                         <h1 className="text-3xl md:text-4xl font-black text-gray-900 leading-tight mb-4 font-newyork tracking-tight">
                             {gig.title}
                         </h1>
-                        <p className="text-gray-700 leading-relaxed font-medium text-[15px] whitespace-pre-wrap">
-                            {gig.description}
-                        </p>
+                        <Linkify 
+                            text={gig.description} 
+                            className="text-gray-700 leading-relaxed font-medium text-[15px] whitespace-pre-wrap" 
+                        />
                     </div>
 
                     {/* Image Display */}

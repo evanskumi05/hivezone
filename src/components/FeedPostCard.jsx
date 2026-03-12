@@ -15,6 +15,7 @@ import {
 import Avatar from "@/components/ui/Avatar";
 import AutoPauseVideo from "@/components/ui/AutoPauseVideo";
 import { useUI } from "@/components/ui/UIProvider";
+import Linkify from "@/components/ui/Linkify";
 
 export default function FeedPostCard({
     post,
@@ -138,9 +139,10 @@ export default function FeedPostCard({
 
                 {/* Post Text */}
                 {post.content && (
-                    <p className="text-gray-900 text-[16px] leading-[1.4] font-regular break-words pr-2">
-                        {post.content}
-                    </p>
+                    <Linkify 
+                        text={post.content} 
+                        className="text-gray-900 text-[16px] leading-[1.4] font-regular break-words pr-2" 
+                    />
                 )}
 
                 {post.media_url && (
@@ -209,15 +211,25 @@ export default function FeedPostCard({
                             ) : commentsData[post.id]?.length > 0 ? (
                                 commentsData[post.id].map(comment => (
                                     <div key={comment.id} className="flex gap-3">
-                                        <Avatar
-                                            src={comment.author?.profile_picture}
-                                            name={comment.author?.display_name}
-                                            className="w-8 h-8 rounded-full shrink-0"
-                                        />
+                                        <Link 
+                                            href={`/dashboard/profile/${comment.author?.username || comment.user_id}`}
+                                            className="shrink-0"
+                                        >
+                                            <Avatar
+                                                src={comment.author?.profile_picture}
+                                                name={comment.author?.display_name}
+                                                className="w-8 h-8 rounded-full"
+                                            />
+                                        </Link>
                                         <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-2">
                                             <div className="flex items-center justify-between gap-2 mb-0.5">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-xs text-gray-900">{comment.author?.display_name}</span>
+                                                    <Link 
+                                                        href={`/dashboard/profile/${comment.author?.username || comment.user_id}`}
+                                                        className="font-bold text-xs text-gray-900 hover:underline"
+                                                    >
+                                                        {comment.author?.display_name}
+                                                    </Link>
                                                     <span className="text-[10px] text-gray-400 font-medium">{formatDate(comment.created_at)}</span>
                                                 </div>
                                                 {profile?.id === comment.user_id && (
@@ -229,7 +241,7 @@ export default function FeedPostCard({
                                                     </button>
                                                 )}
                                             </div>
-                                            <p className="text-sm text-gray-800 break-words">{comment.content}</p>
+                                            <Linkify text={comment.content} className="text-sm text-gray-800 break-words" />
                                         </div>
                                     </div>
                                 ))

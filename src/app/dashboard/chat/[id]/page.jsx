@@ -25,6 +25,7 @@ import { useUI } from "@/components/ui/UIProvider";
 import { useChatConfig } from "@/components/providers/ChatProvider";
 import Avatar from "@/components/ui/Avatar";
 import { getDisplayName } from "@/utils/stringUtils";
+import Linkify from "@/components/ui/Linkify";
 
 const downloadFile = async (url, fallbackName = 'attachment') => {
     try {
@@ -706,7 +707,10 @@ export default function ChatWindowPage() {
                                                                 })()}
 
                                                                 {msg.content && (
-                                                                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                                                                    <Linkify 
+                                                                        text={msg.content} 
+                                                                        className={`whitespace-pre-wrap ${isMe ? 'text-black [&_a]:text-black [&_a]:underline' : ''}`} 
+                                                                    />
                                                                 )}
                                                                 <div className={`text-[10px] mt-1 opacity-50 flex items-center justify-end ${isMe ? 'text-black' : 'text-gray-500'}`}>
                                                                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

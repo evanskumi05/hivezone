@@ -22,6 +22,7 @@ import {
 import Avatar from "@/components/ui/Avatar";
 import { useUI } from "@/components/ui/UIProvider";
 import GroupInfoDrawer from "@/components/dashboard/GroupInfoDrawer";
+import Linkify from "@/components/ui/Linkify";
 
 const formatDate = (date) => {
     return new Intl.DateTimeFormat("en-US", {
@@ -667,7 +668,10 @@ export default function StudyCircleDetailPage() {
                                                                     </div>
                                                                 );
                                                             })()}
-                                                            <p className="whitespace-pre-wrap">{msg.text}</p>
+                                                            <Linkify 
+                                                                text={msg.text} 
+                                                                className={`whitespace-pre-wrap ${msg.user_id === profile?.id ? 'text-black [&_a]:text-black [&_a]:underline' : ''}`} 
+                                                            />
                                                         </motion.div>
                                                     </div>
                                                 </div>

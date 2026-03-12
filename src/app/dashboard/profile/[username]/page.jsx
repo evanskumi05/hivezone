@@ -18,7 +18,7 @@ export default function PublicProfilePage() {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
-    const { openReportModal, showToast } = useUI();
+    const { openReportModal, showToast, showImage } = useUI();
 
     // Tabs state
     const [activeTab, setActiveTab] = useState("posts"); // 'posts' | 'gigs'
@@ -383,7 +383,8 @@ export default function PublicProfilePage() {
                             <img
                                 src={profile.cover_photo}
                                 alt="Cover Photo"
-                                className="w-full h-full object-cover object-center md:rounded-t-[2.5rem]"
+                                className="w-full h-full object-cover object-center md:rounded-t-[2.5rem] cursor-pointer hover:opacity-95 transition-opacity"
+                                onClick={() => showImage(profile.cover_photo)}
                             />
                         ) : (
                             <div className="w-full h-full bg-gray-200 md:rounded-t-[2.5rem]"></div>
@@ -395,7 +396,10 @@ export default function PublicProfilePage() {
 
                         {/* Avatar overlapping cover */}
                         <div className="absolute -top-10 sm:-top-16 left-4 sm:left-8 md:left-12 z-30">
-                            <div className="w-[84px] h-[84px] sm:w-[120px] sm:h-[120px] md:w-[140px] md:h-[140px] rounded-full border-[4px] md:border-[6px] border-white md:border-[#f4f4f4] overflow-hidden bg-gray-200 shadow-sm relative">
+                            <div 
+                                className="w-[84px] h-[84px] sm:w-[120px] sm:h-[120px] md:w-[140px] md:h-[140px] rounded-full border-[4px] md:border-[6px] border-white md:border-[#f4f4f4] overflow-hidden bg-gray-200 shadow-sm relative cursor-pointer hover:scale-105 transition-transform duration-300 active:scale-95"
+                                onClick={() => showImage(profile?.profile_picture)}
+                            >
                                 <Avatar
                                     src={profile?.profile_picture}
                                     name="Profile Avatar"

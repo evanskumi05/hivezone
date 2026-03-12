@@ -17,7 +17,7 @@ import { getDisplayName } from "@/utils/stringUtils";
 import FeedPostCard from "@/components/FeedPostCard";
 
 export default function ProfilePage() {
-    const { showToast, openReportModal } = useUI();
+    const { showToast, openReportModal, showImage } = useUI();
     const router = useRouter();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -327,7 +327,7 @@ export default function ProfilePage() {
     const handleImageUpload = async (event, type) => {
         try {
             const file = event.target.files[0];
-            if (!file) return;
+            if (!file || !profile?.id) return;
 
             // Validate file size (e.g., max 5MB)
             if (file.size > 5 * 1024 * 1024) {
@@ -338,46 +338,33 @@ export default function ProfilePage() {
             if (type === 'profile_picture') setUploadingProfile(true);
             else setUploadingCover(true);
 
-            // 1. If an old image exists, attempt to delete it first to save space
-            if (profile[type]) {
-                try {
-                    const oldUrl = profile[type];
-                    const urlParts = oldUrl.split('/avatars/');
-                    if (urlParts.length === 2) {
-                        // Decode just in case, and strip any query parameters
-                        const oldFilePath = decodeURIComponent(urlParts[1].split('?')[0]);
-
-                        // Remove the old file
-                        const { error: removeError } = await supabase.storage.from('avatars').remove([oldFilePath]);
-                        if (removeError) {
-                            console.error("Supabase remove error:", removeError.message);
-                        } else {
-                            // Optional: ignore error if old file doesn't exist anymore
-                        }
-                    }
-                } catch (deleteError) {
-                    console.error("Failed to delete old image:", deleteError);
-                    // Proceed with upload even if delete fails
-                }
-            }
-
-            // 2. Upload new file to Supabase Storage (avatars bucket)
+            // Cloudflare R2 Upload Flow
             const fileExt = file.name.split('.').pop();
-            const fileName = `${profile.id}_${type}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-            const filePath = `${profile.id}/${fileName}`;
+            const fileName = `avatars/${profile.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file, { cacheControl: '3600', upsert: true });
+            // 1. Get presigned URL from our API
+            const response = await fetch("/api/upload", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    fileName: fileName,
+                    fileType: file.type,
+                }),
+            });
 
-            if (uploadError) throw uploadError;
+            if (!response.ok) throw new Error("Failed to get upload URL");
+            const { uploadUrl, publicUrl } = await response.json();
 
-            // 3. Get public URL
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
+            // 2. Upload directly to Cloudflare R2
+            const uploadResponse = await fetch(uploadUrl, {
+                method: "PUT",
+                headers: { "Content-Type": file.type },
+                body: file,
+            });
 
-            // 4. Update the user record in the database
+            if (!uploadResponse.ok) throw new Error("Failed to upload to R2");
+
+            // 3. Update the user record in the database
             const { error: updateError } = await supabase
                 .from('users')
                 .update({ [type]: publicUrl })
@@ -387,6 +374,7 @@ export default function ProfilePage() {
 
             // 4. Update local state
             setProfile({ ...profile, [type]: publicUrl });
+            showToast(`${type === 'profile_picture' ? 'Profile picture' : 'Cover photo'} updated!`);
 
         } catch (error) {
             console.error(`Error uploading ${type}:`, error);
@@ -458,7 +446,8 @@ export default function ProfilePage() {
                             <img
                                 src={profile.cover_photo}
                                 alt="Cover Photo"
-                                className="w-full h-full object-cover object-center md:rounded-t-[2.5rem]"
+                                className="w-full h-full object-cover object-center md:rounded-t-[2.5rem] cursor-pointer hover:opacity-95 transition-opacity"
+                                onClick={() => showImage(profile.cover_photo)}
                             />
                         ) : (
                             <div className="w-full h-full bg-gray-200 md:rounded-t-[2.5rem]"></div>
@@ -496,10 +485,25 @@ export default function ProfilePage() {
                                     </div>
                                 ) : (
                                     <div className="absolute inset-0 z-20 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="white" className="w-6 h-6 sm:w-8 sm:h-8">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 8.46 5h7.08a2.31 2.31 0 0 1 1.632 1.175l.67 1.34h2.408A2.5 2.5 0 0 1 22.75 10v9.5a2.5 2.5 0 0 1-2.5 2.5H3.75a2.5 2.5 0 0 1-2.5-2.5V10c0-1.38 1.12-2.5 2.5-2.5h2.408l.67-1.34Z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 17.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z" />
-                                        </svg>
+                                        <div className="flex flex-col items-center gap-2">
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    showImage(profile?.profile_picture);
+                                                }}
+                                                className="p-1.5 bg-white/20 hover:bg-white/40 rounded-full backdrop-blur-md transition-colors"
+                                                title="View profile picture"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="white" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.644C3.67 8.5 7.652 4.5 12 4.5c4.348 0 8.33 4 9.964 7.178.07.133.07.302 0 .435-1.634 3.178-5.616 7.178-9.964 7.178-4.348 0-8.33-4-9.964-7.178Z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                                </svg>
+                                            </button>
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="white" className="w-5 h-5">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 8.46 5h7.08a2.31 2.31 0 0 1 1.632 1.175l.67 1.34h2.408A2.5 2.5 0 0 1 22.75 10v9.5a2.5 2.5 0 0 1-2.5 2.5H3.75a2.5 2.5 0 0 1-2.5-2.5V10c0-1.38 1.12-2.5 2.5-2.5h2.408l.67-1.34Z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 17.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z" />
+                                            </svg>
+                                        </div>
                                     </div>
                                 )}
                                 <Avatar
