@@ -8,6 +8,7 @@ import { useUI } from "@/components/ui/UIProvider";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
     Cancel01Icon,
+    Camera01Icon,
 } from "@hugeicons/core-free-icons";
 import { ProfileSkeleton } from "@/components/ui/Skeleton";
 
@@ -476,22 +477,22 @@ export default function ProfilePage() {
 
                         {/* Avatar overlapping cover */}
                         <div className="absolute -top-10 sm:-top-16 left-4 sm:left-8 md:left-12 z-30">
-                            <div className="w-[84px] h-[84px] sm:w-[120px] sm:h-[120px] md:w-[140px] md:h-[140px] rounded-full border-[4px] md:border-[6px] border-white md:border-[#f4f4f4] overflow-hidden bg-gray-200 shadow-sm relative group cursor-pointer"
-                                onClick={() => profileInputRef.current?.click()}
-                            >
-                                {uploadingProfile ? (
-                                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-800/40 backdrop-blur-[2px]">
-                                        <div className="w-6 h-6 sm:w-8 sm:h-8 border-[3px] sm:border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    </div>
-                                ) : (
-                                    <div className="absolute inset-0 z-20 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <div className="flex flex-col items-center gap-2">
+                            <div className="relative group">
+                                <div className="w-[84px] h-[84px] sm:w-[120px] sm:h-[120px] md:w-[140px] md:h-[140px] rounded-full border-[4px] md:border-[6px] border-white md:border-[#f4f4f4] overflow-hidden bg-gray-200 shadow-sm relative"
+                                    onClick={() => profileInputRef.current?.click()}
+                                >
+                                    {uploadingProfile ? (
+                                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-800/40 backdrop-blur-[2px]">
+                                            <div className="w-6 h-6 sm:w-8 sm:h-8 border-[3px] sm:border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        </div>
+                                    ) : (
+                                        <div className="absolute inset-0 z-20 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                             <button 
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     showImage(profile?.profile_picture);
                                                 }}
-                                                className="p-1.5 bg-white/20 hover:bg-white/40 rounded-full backdrop-blur-md transition-colors"
+                                                className="p-2 bg-white/20 hover:bg-white/40 rounded-full backdrop-blur-md transition-colors mb-2"
                                                 title="View profile picture"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="white" className="w-5 h-5">
@@ -499,18 +500,23 @@ export default function ProfilePage() {
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                                 </svg>
                                             </button>
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="white" className="w-5 h-5">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 8.46 5h7.08a2.31 2.31 0 0 1 1.632 1.175l.67 1.34h2.408A2.5 2.5 0 0 1 22.75 10v9.5a2.5 2.5 0 0 1-2.5 2.5H3.75a2.5 2.5 0 0 1-2.5-2.5V10c0-1.38 1.12-2.5 2.5-2.5h2.408l.67-1.34Z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 17.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z" />
-                                            </svg>
                                         </div>
-                                    </div>
-                                )}
-                                <Avatar
-                                    src={profile?.profile_picture}
-                                    name="Profile Avatar"
-                                    className="w-full h-full"
-                                />
+                                    )}
+                                    <Avatar
+                                        src={profile?.profile_picture}
+                                        name="Profile Avatar"
+                                        className="w-full h-full"
+                                    />
+                                </div>
+                                
+                                {/* Camera Button for Mobile/Visible Upload */}
+                                <button
+                                    onClick={() => profileInputRef.current?.click()}
+                                    disabled={uploadingProfile}
+                                    className="absolute bottom-0 right-0 w-8 h-8 sm:w-10 sm:h-10 bg-black text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform active:scale-95 disabled:opacity-50 z-40"
+                                >
+                                    <HugeiconsIcon icon={Camera01Icon} className="w-4 h-4 sm:w-5 sm:h-5" />
+                                </button>
                             </div>
                             <input
                                 type="file"
