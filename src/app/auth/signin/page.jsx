@@ -66,23 +66,40 @@ const SignInPage = () => {
         });
 
         if (authError) {
-            setError(authError.message);
+            if (authError.message.includes("Email not confirmed")) {
+                setError("Please verify your email before signing in. Check your inbox for the verification link.");
+            } else {
+                setError(authError.message);
+            }
             setLoading(false);
             return;
         }
 
-        // Check if the user is onboarded to decide where to route them
-        const { data: userRecord } = await supabase
+        // Check if the user is onboarded and verified
+        const { data: userRecord, error: recordError } = await supabase
             .from('users')
-            .select('is_onboarded')
+            .select('is_onboarded, email_verified')
             .eq('email', emailToLogin)
             .single();
 
         setLoading(false);
-        if (userRecord && !userRecord.is_onboarded) {
-            router.push("/auth/onboarding");
+
+        if (userRecord) {
+            if (!userRecord.email_verified) {
+                // If Supabase allows login without verification but we want to enforce it via our field
+                setError("Your email is not verified. Please check your inbox.");
+                await supabase.auth.signOut();
+                return;
+            }
+
+            if (!userRecord.is_onboarded) {
+                router.push("/auth/onboarding");
+            } else {
+                // Route to the dashboard or home page
+                router.push("/dashboard");
+            }
         } else {
-            // Route to the dashboard or home page
+            // Fallback if record not found yet (trigger lag)
             router.push("/dashboard");
         }
     };

@@ -23,6 +23,7 @@ const RegisterPage = () => {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [isEmailSent, setIsEmailSent] = useState(false);
 
     useEffect(() => {
         if (error) {
@@ -120,8 +121,7 @@ const RegisterPage = () => {
             email: cleanEmail,
             password,
             options: {
-                // Email confirmation is highly recommended in production
-                // We're passing the user data to be handled by our database trigger or manually inserted
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
                 data: {
                     first_name: cleanFirstName,
                     last_name: cleanLastName,
@@ -137,7 +137,6 @@ const RegisterPage = () => {
         }
 
         // 2. Since the trigger handles initial row creation, we just need to update it with the extra info
-        // Wait for the trigger to finish by adding a small delay or retrying
         if (authData?.user) {
             const { error: updateError } = await supabase
                 .from('users')
@@ -151,15 +150,45 @@ const RegisterPage = () => {
 
             if (updateError) {
                 console.error("Error updating public user profile:", updateError);
-                // We don't fail the whole registration if this fails, they can re-enter it later
             }
         }
 
         setLoading(false);
-        // Navigate to the onboarding page
-        router.push("/auth/onboarding");
+
+        // If email confirmation is enabled, session will be null
+        if (authData.user && !authData.session) {
+            setIsEmailSent(true);
+        } else {
+            router.push("/auth/onboarding");
+        }
     };
 
+    if (isEmailSent) {
+        return (
+            <div className="min-h-screen bg-[#f5f5f5] text-zinc-900 font-sans flex flex-col items-center justify-center px-6">
+                <div className="w-full max-w-md bg-white border-2 border-[#ffc107]/40 rounded-[2rem] p-8 text-center space-y-6">
+                    <div className="w-20 h-20 bg-[#ffc107]/10 rounded-full flex items-center justify-center mx-auto">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 text-[#ffc107]">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                        </svg>
+                    </div>
+                    <h2 className="text-3xl font-bold">Check Your Email</h2>
+                    <p className="text-zinc-600">
+                        We've sent a verification link to <span className="font-semibold text-black">{email}</span>. 
+                        Please click the link to verify your account and continue.
+                    </p>
+                    <div className="pt-4">
+                        <Link 
+                            href="/auth/signin" 
+                            className="bg-[#ffc107] text-black font-semibold px-8 py-3 rounded-full hover:bg-[#ffca2c] transition-colors"
+                        >
+                            Go to Sign In
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
     return (
         <div className="min-h-screen bg-[#f5f5f5] text-zinc-900 font-sans flex flex-col">
             {/* Logo */}

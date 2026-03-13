@@ -84,6 +84,19 @@ const OnboardingPage = () => {
             return;
         }
 
+        // Check if email is verified
+        const { data: userRecord } = await supabase
+            .from('users')
+            .select('email_verified')
+            .eq('id', session.user.id)
+            .single();
+
+        if (userRecord && !userRecord.email_verified) {
+            setError("Please verify your email before completing onboarding.");
+            setLoading(false);
+            return;
+        }
+
         const { error: updateError } = await supabase
             .from('users')
             .update({
