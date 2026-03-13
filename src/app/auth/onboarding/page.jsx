@@ -1,17 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Footer from "@/components/Footer";
 import CustomDropdown from "@/components/CustomDropdown";
+import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 
 const INSTITUTIONS = [
     "Knutsford University",
-    "University Of Ghana",
-    "Kwame Nkrumah University Of Science and Technology",
-    "University of Cape Coast",
 ];
 
 const GENDERS = ["Male", "Female", "Other"];
@@ -31,8 +29,12 @@ const PROGRAMS = [
     "Bsc Nursing"
 ];
 
-const OnboardingPage = () => {
+const OnboardingForm = () => {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const uidFromUrl = searchParams.get("uid");
+    const emailFromUrl = searchParams.get("email");
+
     const [institution, setInstitution] = useState("");
     const [programme, setProgramme] = useState("");
     const [gender, setGender] = useState("");
@@ -44,6 +46,7 @@ const OnboardingPage = () => {
     const [displayName, setDisplayName] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [isFinished, setIsFinished] = useState(false);
 
     const handleKeyDown = (e, callback) => {
         if (e.key === 'Enter') {
@@ -77,22 +80,18 @@ const OnboardingPage = () => {
         setLoading(true);
         const supabase = createClient();
 
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !session?.user) {
-            setError("You must be logged in to complete your profile.");
-            setLoading(false);
-            return;
+        // 1. Get User ID - either from session (logged in) or URL (just signed up)
+        let userIdToUpdate = uidFromUrl;
+
+        if (!userIdToUpdate) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                userIdToUpdate = session.user.id;
+            }
         }
 
-        // Check if email is verified
-        const { data: userRecord } = await supabase
-            .from('users')
-            .select('email_verified')
-            .eq('id', session.user.id)
-            .single();
-
-        if (userRecord && !userRecord.email_verified) {
-            setError("Please verify your email before completing onboarding.");
+        if (!userIdToUpdate) {
+            setError("Session expired. Please sign in or register again.");
             setLoading(false);
             return;
         }
@@ -110,7 +109,7 @@ const OnboardingPage = () => {
                 display_name: displayName,
                 is_onboarded: true
             })
-            .eq('id', session.user.id);
+            .eq('id', userIdToUpdate);
 
         setLoading(false);
         if (updateError) {
@@ -118,9 +117,46 @@ const OnboardingPage = () => {
             return;
         }
 
-        // Redirect to dashboard/home after successful onboarding
-        router.push("/dashboard");
+        // If we came from registration (confirmed email is likely ON), show the check email UI
+        if (uidFromUrl) {
+            setIsFinished(true);
+        } else {
+            router.push("/dashboard");
+        }
     };
+
+    if (isFinished) {
+        return (
+            <div className="min-h-screen bg-[#f5f5f5] text-zinc-900 font-sans flex flex-col items-center justify-center px-6">
+                <div className="w-full max-w-md bg-white border-2 border-[#ffc107]/40 rounded-[2.5rem] p-10 text-center space-y-7 shadow-sm">
+                    <div className="w-20 h-20 bg-[#ffc107]/10 rounded-full flex items-center justify-center mx-auto">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 text-[#ffc107]">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                        </svg>
+                    </div>
+                    <div className="space-y-3">
+                        <h2 className="text-3xl font-bold font-manyto">Welcome Aboard!</h2>
+                        <p className="text-zinc-600">
+                            Your profile is ready. Now, just verify your email to step into the hive.
+                        </p>
+                        {emailFromUrl && (
+                            <p className="text-sm font-semibold text-black bg-[#ffc107]/10 py-2 px-4 rounded-full inline-block">
+                                {decodeURIComponent(emailFromUrl)}
+                            </p>
+                        )}
+                    </div>
+                    <div className="pt-4">
+                        <Link 
+                            href="/auth/signin" 
+                            className="w-full bg-[#ffc107] text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-[#ffca2c] transition-colors"
+                        >
+                            <span>Go to Sign In</span>
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#f5f5f5] text-zinc-900 font-sans flex flex-col">
@@ -309,6 +345,18 @@ const OnboardingPage = () => {
 
             <Footer />
         </div>
+    );
+};
+
+const OnboardingPage = () => {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-[#ffc107] border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        }>
+            <OnboardingForm />
+        </Suspense>
     );
 };
 

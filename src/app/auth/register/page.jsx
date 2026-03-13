@@ -155,12 +155,9 @@ const RegisterPage = () => {
 
         setLoading(false);
 
-        // If email confirmation is enabled, session will be null
-        if (authData.user && !authData.session) {
-            setIsEmailSent(true);
-        } else {
-            router.push("/auth/onboarding");
-        }
+        // Redirect to onboarding immediately so they can fill their info
+        // while the verification email is being sent/waiting in their inbox.
+        router.push(`/auth/onboarding?uid=${authData.user.id}&email=${encodeURIComponent(cleanEmail)}`);
     };
 
     const [resendLoading, setResendLoading] = useState(false);
@@ -191,48 +188,6 @@ const RegisterPage = () => {
         }
     };
 
-    if (isEmailSent) {
-        return (
-            <div className="min-h-screen bg-[#f5f5f5] text-zinc-900 font-sans flex flex-col items-center justify-center px-6">
-                <div className="w-full max-w-md bg-white border-2 border-[#ffc107]/40 rounded-[2rem] p-8 text-center space-y-6">
-                    <div className="w-20 h-20 bg-[#ffc107]/10 rounded-full flex items-center justify-center mx-auto">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 text-[#ffc107]">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                        </svg>
-                    </div>
-                    <div className="space-y-2">
-                        <h2 className="text-3xl font-bold">Check Your Email</h2>
-                        <p className="text-zinc-600">
-                            We've sent a verification link to <span className="font-semibold text-black">{email}</span>. 
-                        </p>
-                    </div>
-
-                    {error && (
-                        <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm border border-red-100">
-                            {error}
-                        </div>
-                    )}
-
-                    <div className="flex flex-col gap-3 pt-4">
-                        <Link 
-                            href="/auth/signin" 
-                            className="bg-[#2c2c2c] text-white font-semibold px-8 py-3.5 rounded-2xl hover:bg-black transition-colors"
-                        >
-                            Go to Sign In
-                        </Link>
-                        
-                        <button 
-                            onClick={handleResendEmail}
-                            disabled={resendLoading || resendCount >= 3}
-                            className="text-zinc-500 text-sm font-semibold hover:text-[#ffc107] transition-colors disabled:opacity-50"
-                        >
-                            {resendLoading ? "Sending..." : resendCount > 0 ? `Resend Email (${3 - resendCount} left)` : "Didn't receive code? Resend Email"}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
     return (
         <div className="min-h-screen bg-[#f5f5f5] text-zinc-900 font-sans flex flex-col">
             {/* Logo */}

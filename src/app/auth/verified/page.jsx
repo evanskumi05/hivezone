@@ -53,10 +53,10 @@ const VerifiedPage = () => {
                     {/* Action Button */}
                     <div className="pt-4">
                         <Link 
-                            href="/auth/onboarding" 
+                            href="/auth/signin" 
                             className="w-full bg-[#ffc107] text-black font-bold text-xl py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-[#ffca2c] transition-all active:scale-[0.98] shadow-md shadow-[#ffc107]/10"
                         >
-                            <span>Continue to Onboarding</span>
+                            <span>Sign In to Your Account</span>
                             <Image
                                 src="/icons/rightarrow.svg"
                                 alt="Arrow"

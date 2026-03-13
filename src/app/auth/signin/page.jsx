@@ -12,6 +12,8 @@ const SignInPage = () => {
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
     const [showResend, setShowResend] = useState(false);
     const [resendLoading, setResendLoading] = useState(false);
     const [resendSuccess, setResendSuccess] = useState(false);
@@ -36,7 +38,7 @@ const SignInPage = () => {
 
         setResendLoading(false);
         if (error) {
-            setError(resendError.message);
+            setError(error.message);
         } else {
             setResendSuccess(true);
             setShowResend(false);
