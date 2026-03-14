@@ -29,23 +29,38 @@ const manyto = localFont({
 });
 
 export const metadata = {
-  metadataBase: new URL("http://localhost:3000"), // Will resolve according to environment
-  title: "HiveZone | Your Campus Hub",
-  description: "Connect with peers, find gigs, discover internships, and thrive in your campus zone.",
+  metadataBase: new URL("https://hivezone.co"),
+  title: {
+    default: "HiveZone | Your Campus Hub – Student Gigs, Study Circles & More",
+    template: "%s | HiveZone",
+  },
+  description: "HiveZone is a student-only platform for Ghanaian university students to find gigs, form study circles, discover internships & scholarships, and connect with peers. Join the hive today.",
   applicationName: "HiveZone",
-  keywords: ["campus", "university", "student gigs", "internships", "scholarships", "college"],
-  authors: [{ name: "HiveZone Team" }],
+  keywords: [
+    "HiveZone", "student platform", "campus hub", "student gigs Ghana",
+    "university gigs", "study circles", "student internships Ghana",
+    "scholarships for students", "university collaboration",
+    "University of Ghana", "KNUST", "student community",
+    "campus hustle", "peer support", "student freelancing",
+    "academic collaboration", "campus social network",
+  ],
+  authors: [{ name: "HiveZone Team", url: "https://hivezone.co" }],
+  creator: "HiveZone",
+  publisher: "HiveZone",
+  alternates: {
+    canonical: "https://hivezone.co",
+  },
   openGraph: {
-    title: "HiveZone | Your Campus Hub",
-    description: "Your campus, your zone, your hive. Connect with peers, find gigs, and thrive.",
-    url: "https://hivezone.vercel.app",
+    title: "HiveZone | Your Campus Hub – Student Gigs, Study Circles & More",
+    description: "The student-only platform to find gigs, form study circles, discover internships, and connect with peers across Ghanaian universities.",
+    url: "https://hivezone.co",
     siteName: "HiveZone",
     images: [
       {
-        url: "/logo.png", // Fallback OG image
+        url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "HiveZone Logo",
+        alt: "HiveZone – Your Campus Hub for Student Gigs, Study Circles & More",
       },
     ],
     locale: "en_US",
@@ -54,8 +69,20 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: "HiveZone | Your Campus Hub",
-    description: "Connect with peers, find gigs, discover internships, and thrive in your campus zone.",
-    images: ["/logo.png"],
+    description: "Find gigs, form study circles, discover internships & scholarships. The student-only platform for Ghanaian universities.",
+    images: ["/og-image.png"],
+    creator: "@hivezoneofficial",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
   icons: {
     icon: "/logoIcon.svg",
