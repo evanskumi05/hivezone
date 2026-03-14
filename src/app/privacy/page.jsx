@@ -6,7 +6,7 @@ import SecondaryNavbar from "@/components/SecondaryNavbar";
 
 const PrivacyPage = () => {
     return (
-        <div className="min-h-screen bg-[#f9e3a2] text-zinc-900 font-sans overflow-x-clip flex flex-col">
+        <div className="min-h-screen bg-[#fcf6de] text-zinc-900 font-sans overflow-x-clip flex flex-col">
             <SecondaryNavbar />
 
             <main className="flex-1 pt-8 pb-20">
@@ -61,7 +61,7 @@ const PrivacyPage = () => {
                             {
                                 title: "8. Your Rights",
                                 content:
-                                    "You have the right to access, correct, or delete your personal data at any time. You can update your profile information through your account settings or request a full data export. To delete your account and all associated data, contact us at support@hivezone.com.",
+                                    "You have the right to access, correct, or delete your personal data at any time. You can update your profile information through your account settings or request a full data export. To delete your account and all associated data, contact us at support@hivezone.co.",
                             },
                             {
                                 title: "9. Data Retention",
@@ -76,7 +76,7 @@ const PrivacyPage = () => {
                             {
                                 title: "11. Contact",
                                 content:
-                                    "For questions or concerns about your privacy, please contact us at support@hivezone.com.",
+                                    "For questions or concerns about your privacy, please contact us at support@hivezone.co.",
                             },
                         ].map((section, index) => (
                             <div key={index}>

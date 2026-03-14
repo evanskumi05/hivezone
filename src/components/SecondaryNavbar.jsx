@@ -23,7 +23,7 @@ const SecondaryNavbar = () => {
     };
 
     return (
-        <nav className={`w-full px-8 py-6 sticky top-0 z-50 transition-all duration-500 ${isScrolled ? 'bg-[#f9e3a2]/80 backdrop-blur-md py-4 shadow-sm' : 'bg-[#f9e3a2]'}`}>
+        <nav className={`w-full px-8 py-6 sticky top-0 z-50 transition-all duration-500 ${isScrolled ? 'bg-[#fcf6de]/80 backdrop-blur-md py-4 shadow-sm' : 'bg-[#fcf6de]'}`}>
             <div className="max-w-7xl mx-auto relative flex items-center min-h-[40px]">
 
                 {/* Logo Container */}

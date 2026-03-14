@@ -4,9 +4,9 @@ import React, { useState } from "react";
 import Footer from "@/components/Footer";
 import SecondaryNavbar from "@/components/SecondaryNavbar";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { 
-    HelpCircleIcon, 
-    ArrowRight01Icon, 
+import {
+    HelpCircleIcon,
+    ArrowRight01Icon,
     MessageQuestionIcon,
     SecurityCheckIcon,
     Wallet01Icon,
@@ -45,13 +45,13 @@ const faqs = [
 export default function SupportPage() {
     const [searchQuery, setSearchQuery] = useState("");
 
-    const filteredFaqs = faqs.filter(faq => 
+    const filteredFaqs = faqs.filter(faq =>
         faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
         faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
-        <div className="min-h-screen bg-[#f9e3a2] text-zinc-900 font-sans flex flex-col">
+        <div className="min-h-screen bg-[#fcf6de] text-zinc-900 font-sans flex flex-col">
             <SecondaryNavbar />
 
             <main className="flex-1 py-12 px-6 md:px-12">

@@ -7,7 +7,7 @@ import SecondaryNavbar from "@/components/SecondaryNavbar";
 
 const AboutPage = () => {
     return (
-        <div className="min-h-screen bg-[#f9e3a2] text-zinc-900 font-sans overflow-x-clip flex flex-col">
+        <div className="min-h-screen bg-[#fcf6de] text-zinc-900 font-sans overflow-x-clip flex flex-col">
             {/* Navigation */}
             <SecondaryNavbar />
 
@@ -213,10 +213,7 @@ const AboutPage = () => {
 
                                     <div className="space-y-4 text-[0.9rem] font-medium text-zinc-800">
                                         <p>
-                                            Across universities - including University
-                                            Of Ghana
-                                            and Kwame Nkrumah University Of Science and
-                                            Technology - students face three major
+                                            Across universities, students face three major
                                             challenges.
                                         </p>
 
@@ -255,9 +252,7 @@ const AboutPage = () => {
 
                                 <div className="space-y-6 text-xl font-medium text-zinc-800">
                                     <p>
-                                        Across universities - including University Of Ghana
-                                        and Kwame Nkrumah University Of Science and
-                                        Technology - students face three major challenges.
+                                        Across universities, students face three major challenges.
                                     </p>
 
                                     <p>Academic confusion and lack of collaboration</p>

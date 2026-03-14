@@ -6,7 +6,7 @@ import SecondaryNavbar from "@/components/SecondaryNavbar";
 
 const TermsPage = () => {
     return (
-        <div className="min-h-screen bg-[#f9e3a2] text-zinc-900 font-sans overflow-x-clip flex flex-col">
+        <div className="min-h-screen bg-[#fcf6de] text-zinc-900 font-sans overflow-x-clip flex flex-col">
             <SecondaryNavbar />
 
             <main className="flex-1 pt-8 pb-20">
@@ -66,7 +66,7 @@ const TermsPage = () => {
                             {
                                 title: "9. Contact",
                                 content:
-                                    "If you have any questions about these terms, please reach out to us at support@hivezone.com.",
+                                    "If you have any questions about these terms, please reach out to us at support@hivezone.co.",
                             },
                         ].map((section, index) => (
                             <div key={index}>

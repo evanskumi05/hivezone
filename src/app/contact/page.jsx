@@ -8,9 +8,7 @@ import SecondaryNavbar from "@/components/SecondaryNavbar";
 import CustomDropdown from "@/components/CustomDropdown";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-    Location01Icon,
     InstagramIcon,
-    AiChat02Icon,
     SentIcon
 } from "@hugeicons/core-free-icons";
 
@@ -20,11 +18,6 @@ const SUBJECTS = [
     "Billing Question",
     "Partnership Idea",
     "Report an Issue"
-];
-
-const contactInfo = [
-    { icon: AiChat02Icon, label: "Social Chat", value: "@hivezoneofficial" },
-    { icon: Location01Icon, label: "Office", value: "East Legon, Accra" },
 ];
 
 export default function ContactPage() {
@@ -47,7 +40,7 @@ export default function ContactPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f9e3a2] text-zinc-900 font-sans flex flex-col">
+        <div className="min-h-screen bg-[#fcf6de] text-zinc-900 font-sans flex flex-col">
             <SecondaryNavbar />
 
             <main className="flex-1 flex flex-col items-center px-6 pb-16">
@@ -146,7 +139,7 @@ export default function ContactPage() {
                     {!isSent && (
                         <div className="text-center text-lg -mt-2">
                             <span className="text-zinc-900">Need immediate help? </span>
-                            <Link href="mailto:support@hivezone.com" className="text-[#ffc107] font-semibold hover:underline">
+                            <Link href="mailto:support@hivezone.co" className="text-[#ffc107] font-semibold hover:underline">
                                 Email us directly
                             </Link>
                         </div>
@@ -177,28 +170,15 @@ export default function ContactPage() {
                         </div>
                     )}
 
-                    {/* Contact Info cards */}
-                    <div className="flex flex-col gap-4 pt-4 border-t border-zinc-200">
-                        {contactInfo.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-[#ffc107]/10 rounded-xl flex items-center justify-center shrink-0">
-                                    <HugeiconsIcon icon={item.icon} className="w-5 h-5 text-[#ffc107]" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">{item.label}</p>
-                                    <p className="text-sm font-semibold text-zinc-900">{item.value}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
 
                     {/* Social links */}
                     <div className="flex gap-3 pb-4">
-                        {[{ icon: InstagramIcon, label: "Instagram" }, { icon: AiChat02Icon, label: "Twitter" }].map((s, i) => (
-                            <a key={i} href="#" className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-[#ffc107] hover:text-black transition-all">
-                                <HugeiconsIcon icon={s.icon} className="w-4 h-4" />
-                            </a>
-                        ))}
+                        <a href="https://instagram.com/hivezoneofficial" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-[#ffc107] hover:text-black transition-all">
+                            <HugeiconsIcon icon={InstagramIcon} className="w-4 h-4" />
+                        </a>
+                        <a href="https://twitter.com/hivezone_co" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-[#ffc107] hover:text-black transition-all">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                        </a>
                     </div>
                 </div>
             </main>

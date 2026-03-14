@@ -22,7 +22,7 @@ const jsonLd = {
       name: "HiveZone",
       url: "https://hivezone.co",
       logo: "https://hivezone.co/logo.png",
-      sameAs: ["https://instagram.com/hivezoneofficial"],
+      sameAs: ["https://instagram.com/hivezoneofficial", "https://twitter.com/hivezone_co"],
       description:
         "A student-focused digital platform designed to improve campus life across Ghanaian universities through gigs, study circles, internships, and peer support.",
       foundingDate: "2026",

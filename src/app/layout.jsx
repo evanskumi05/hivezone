@@ -71,7 +71,7 @@ export const metadata = {
     title: "HiveZone | Your Campus Hub",
     description: "Find gigs, form study circles, discover internships & scholarships. The student-only platform for Ghanaian universities.",
     images: ["/og-image.png"],
-    creator: "@hivezoneofficial",
+    creator: "@hivezone_co",
   },
   robots: {
     index: true,
