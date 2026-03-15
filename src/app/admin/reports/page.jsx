@@ -13,7 +13,8 @@ import {
     Loading03Icon,
     MessageMultiple01Icon,
     UserIcon,
-    Flag01Icon
+    Flag01Icon,
+    Tick02Icon
 } from "@hugeicons/core-free-icons";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
@@ -80,52 +81,23 @@ export default function ReportsManagement() {
         }
     };
 
-    const handleDeleteContent = async (report) => {
-        if (report.item_type === 'user') {
-            confirmAction({
-                title: "Resolve User Report?",
-                message: "This will mark the report as resolved. To ban the user, do so from the Users manager.",
-                confirmText: "Resolve",
-                type: "warning",
-                onConfirm: () => handleStatusUpdate(report.id, 'resolved')
-            });
-            return;
-        }
-
-        const label = report.item_type === 'gig' ? 'Gig' :
-            report.item_type === 'conversation' ? 'Conversation' : 'Post';
-
+    const handleResolveReport = async (report) => {
         const confirmed = await confirmAction({
-            title: `Delete Reported ${label}?`,
-            message: `This will permanently remove the reported ${report.item_type} and mark the report as resolved.`,
-            confirmText: "Delete Content",
-            type: "danger"
+            title: "Resolve Report?",
+            message: "This will mark the report as resolved without deleting any content. Use this after you have reviewed the issue.",
+            confirmText: "Resolve Now",
+            type: "warning"
         });
 
-        if (!confirmed) return;
-
-        try {
-            const table = report.item_type === 'gig' ? 'gigs' :
-                report.item_type === 'conversation' ? 'conversations' : 'feeds';
-
-            const { error: deleteError } = await supabase
-                .from(table)
-                .delete()
-                .eq('id', report.item_id);
-
-            if (deleteError) throw deleteError;
-
-            await handleStatusUpdate(report.id, 'resolved');
-            showToast("Content deleted and report resolved.");
-        } catch (error) {
-            showToast("Failed to delete content.", "error");
+        if (confirmed) {
+            handleStatusUpdate(report.id, 'resolved');
         }
     };
 
     return (
-        <div className="space-y-8 flex flex-col h-full min-h-0 pb-0">
+        <div className="space-y-6 flex flex-col h-full min-h-0 pb-4">
             {/* Page Header Card */}
-            <div className="bg-white rounded-[2rem] p-10 shadow-sm border border-gray-100 flex flex-row items-center gap-8 shrink-0">
+            <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100 flex flex-row items-center gap-6 shrink-0">
                 <div className="w-16 h-16 rounded-full border border-red-500 flex items-center justify-center shrink-0">
                     <span className="text-red-500 text-2xl font-light">!</span>
                 </div>
@@ -136,7 +108,7 @@ export default function ReportsManagement() {
             </div>
 
             {/* Main Table Card */}
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col flex-1 shrink-0 min-h-[400px]">
+            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col flex-1 shrink-0">
                 {loading ? (
                     <div className="flex flex-col items-center justify-center min-h-[500px] text-gray-300 gap-4">
                         <HugeiconsIcon icon={Loading03Icon} className="w-12 h-12 animate-spin" />
@@ -150,93 +122,90 @@ export default function ReportsManagement() {
                         <p className="text-xl font-black font-newyork">No reports to review!</p>
                     </div>
                 ) : (
-                    <div className="overflow-y-auto overflow-x-auto flex-1 custom-scrollbar">
+                    <div className="overflow-y-auto overflow-x-auto flex-1 scrollbar-hide">
                         <table className="w-full text-left">
                             <thead className="sticky top-0 bg-white z-10 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
                                 <tr>
-                                    <th className="px-10 py-6 text-gray-500 font-bold text-sm bg-white whitespace-nowrap">Reported Content</th>
-                                    <th className="px-10 py-6 text-gray-500 font-bold text-sm bg-white whitespace-nowrap">Reason</th>
-                                    <th className="px-10 py-6 text-gray-500 font-bold text-sm bg-white whitespace-nowrap">Reporter</th>
-                                    <th className="px-10 py-6 text-gray-500 font-bold text-sm bg-white whitespace-nowrap">Status</th>
-                                    <th className="px-10 py-6 text-gray-500 font-bold text-sm bg-white whitespace-nowrap">Actions</th>
+                                    <th className="px-6 py-5 text-gray-400 font-bold text-[11px] uppercase tracking-wider bg-white whitespace-nowrap">Reported</th>
+                                    <th className="px-6 py-5 text-gray-400 font-bold text-[11px] uppercase tracking-wider bg-white whitespace-nowrap">Reason</th>
+                                    <th className="px-6 py-5 text-gray-400 font-bold text-[11px] uppercase tracking-wider bg-white whitespace-nowrap">Reporter</th>
+                                    <th className="px-6 py-5 text-gray-400 font-bold text-[11px] uppercase tracking-wider bg-white whitespace-nowrap">Status</th>
+                                    <th className="px-6 py-5 text-gray-400 font-bold text-[11px] uppercase tracking-wider bg-white whitespace-nowrap text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
                                 {reports.map((report) => (
                                     <tr key={report.id} className="group hover:bg-gray-50/50 transition-colors">
-                                        <td className="px-10 py-5">
-                                            <div className="flex items-center gap-4 min-w-[150px]">
-                                                <HugeiconsIcon icon={
-                                                    report.item_type === 'gig' ? Megaphone03Icon :
-                                                        report.item_type === 'conversation' ? MessageMultiple01Icon :
-                                                            report.item_type === 'user' ? UserIcon :
-                                                                Flag01Icon
-                                                } className="w-5 h-5 text-gray-600 shrink-0" />
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                                                    <HugeiconsIcon icon={
+                                                        report.item_type === 'gig' ? Megaphone03Icon :
+                                                            report.item_type === 'conversation' ? MessageMultiple01Icon :
+                                                                report.item_type === 'user' ? UserIcon :
+                                                                    Flag01Icon
+                                                    } className="w-4 h-4 text-gray-400" />
+                                                </div>
                                                 <div className="flex flex-col min-w-0">
-                                                    <span className="text-sm font-extrabold text-gray-900 truncate">
-                                                        {report.item_type === 'gig' ? 'Gig Listing' :
-                                                            report.item_type === 'conversation' ? 'Conversation' :
-                                                                report.item_type === 'user' ? 'User Profile' :
-                                                                    'Feed Post'}
+                                                    <span className="text-[13px] font-bold text-gray-900 truncate uppercase tracking-tight">
+                                                        {report.item_type === 'gig' ? 'Gig' :
+                                                            report.item_type === 'conversation' ? 'Chat' :
+                                                                report.item_type === 'user' ? 'User' :
+                                                                    'Post'}
                                                     </span>
-                                                    <span className="text-xs font-semibold text-gray-400 mt-0.5 whitespace-nowrap">#{report.item_id.substring(0, 8).toUpperCase()}</span>
+                                                    <span className="text-[10px] font-bold text-gray-400 mt-0.5">#{report.item_id.substring(0, 6).toUpperCase()}</span>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-10 py-5">
-                                            <div className="flex flex-col min-w-[150px]">
-                                                <span className="text-sm font-bold text-red-500 leading-tight">
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col max-w-[140px]">
+                                                <span className="text-[13px] font-bold text-red-500 leading-tight">
                                                     {report.reason}
                                                 </span>
-                                                {report.details && (
-                                                    <p className="text-[11px] text-gray-400 font-medium mt-1 max-w-[200px] truncate" title={report.details}>
-                                                        {report.details}
-                                                    </p>
-                                                )}
                                             </div>
                                         </td>
-                                        <td className="px-10 py-5">
-                                            <div className="flex flex-col min-w-[120px]">
-                                                <span className="text-sm font-extrabold text-gray-900 truncate">{report.reporter?.display_name || report.reporter?.first_name}</span>
-                                                <span className="text-[10px] font-medium text-gray-400 mt-0.5">
-                                                    {new Date(report.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex flex-col">
+                                                <span className="text-[13px] font-bold text-gray-900">{report.reporter?.display_name || report.reporter?.first_name}</span>
+                                                <span className="text-[10px] font-bold text-gray-400 mt-0.5">
+                                                    {new Date(report.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className="px-10 py-5">
-                                            <span className={`text-xs font-black tracking-widest uppercase
-                                                ${report.status === 'pending' ? 'text-gray-400' :
-                                                    report.status === 'resolved' ? 'text-green-600' :
-                                                        report.status === 'dismissed' ? 'text-gray-300' :
-                                                            'text-blue-600'}
+                                        <td className="px-6 py-4">
+                                            <span className={`text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full border
+                                                ${report.status === 'pending' ? 'text-gray-400 border-gray-100 bg-gray-50/50' :
+                                                    report.status === 'resolved' ? 'text-green-600 border-green-100 bg-green-50/50' :
+                                                        report.status === 'dismissed' ? 'text-gray-300 border-gray-50 bg-gray-50/20' :
+                                                            'text-blue-600 border-blue-100 bg-blue-50/50'}
                                             `}>
                                                 {report.status}
                                             </span>
                                         </td>
-                                        <td className="px-10 py-5">
-                                            <div className="flex items-center gap-2 transition-all shrink-0">
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-1.5 shrink-0">
                                                 {report.status === 'pending' && (
                                                     <button
                                                         onClick={() => handleStatusUpdate(report.id, 'reviewed')}
-                                                        className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center hover:scale-110 transition-transform"
-                                                        title="Mark as Reviewed"
+                                                        className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                                                        title="Reviewed"
                                                     >
-                                                        <HugeiconsIcon icon={ViewIcon} className="w-4 h-4" />
+                                                        <HugeiconsIcon icon={ViewIcon} className="w-3.5 h-3.5" />
                                                     </button>
                                                 )}
                                                 <button
                                                     onClick={() => handleDismissReport(report.id)}
-                                                    className="w-10 h-10 rounded-xl bg-gray-50 text-gray-400 flex items-center justify-center hover:scale-110 transition-transform"
-                                                    title="Dismiss Report"
+                                                    className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-gray-200 transition-all shadow-sm"
+                                                    title="Dismiss"
                                                 >
-                                                    <HugeiconsIcon icon={CheckListIcon} className="w-4 h-4" />
+                                                    <HugeiconsIcon icon={CheckListIcon} className="w-3.5 h-3.5" />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDeleteContent(report)}
-                                                    className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center hover:scale-110 transition-transform"
-                                                    title="Delete Content & Resolve"
+                                                    onClick={() => handleResolveReport(report)}
+                                                    className="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-600 hover:text-white transition-all shadow-sm"
+                                                    title="Mark as Resolved"
                                                 >
-                                                    <HugeiconsIcon icon={Delete02Icon} className="w-4 h-4" />
+                                                    <HugeiconsIcon icon={Tick02Icon} className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
                                         </td>

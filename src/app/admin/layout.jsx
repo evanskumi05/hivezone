@@ -9,10 +9,12 @@ import {
     DashboardCircleIcon,
     Alert01Icon,
     UserCircleIcon,
-    Logout01Icon,
-    PlusSignIcon,
+    LogoutCircle02Icon,
     UserGroupIcon,
-    Search01Icon
+    Mail01Icon,
+    Search01Icon,
+    FilterIcon,
+    PlusSignIcon
 } from "@hugeicons/core-free-icons";
 import { createClient } from "@/utils/supabase/client";
 
@@ -57,12 +59,11 @@ export default function AdminLayout({ children }) {
     const navItems = [
         { label: "Overview", href: "/admin", icon: DashboardCircleIcon },
         { label: "Reports", href: "/admin/reports", icon: Alert01Icon },
+        { label: "Contacts", href: "/admin/contacts", icon: Mail01Icon },
     ];
 
     const quickActions = [
-        { label: "Add Scholarship", href: "#", icon: PlusSignIcon },
-        { label: "Add Internship", href: "#", icon: PlusSignIcon },
-        { label: "User Management", href: "#", icon: UserGroupIcon },
+        { label: "User Manager", href: "/admin/users", icon: UserGroupIcon },
     ];
 
     const handleLogout = async () => {
@@ -83,7 +84,7 @@ export default function AdminLayout({ children }) {
     return (
         <div className="flex flex-col h-screen bg-[#f3ebd6] text-zinc-900 font-sans selection:bg-[#ffc107]/30 overflow-auto p-10 min-w-[1240px]">
             {/* Header */}
-            <header className="flex items-center justify-between mb-8 shrink-0">
+            <header className="flex items-center justify-between mb-6 shrink-0">
                 <div className="flex items-center gap-14">
                     {/* Logo */}
                     <Link href="/dashboard" className="flex items-center">
@@ -91,8 +92,8 @@ export default function AdminLayout({ children }) {
                     </Link>
 
                     {/* Active Page Indicator */}
-                    <div className={`flex items-center justify-center px-8 py-2.5 rounded-full font-extrabold text-sm shadow-sm transition-all ${pathname === '/admin/reports' ? 'bg-[#ffc107] text-gray-900' : 'bg-white text-gray-900'}`}>
-                        {navItems.find(i => i.href === pathname)?.label || "Overview"}
+                    <div className="flex items-center justify-center px-8 py-2.5 bg-white text-gray-900 rounded-full font-extrabold text-sm shadow-sm transition-all">
+                        {[...navItems, ...quickActions].find(i => i.href === pathname)?.label || "Overview"}
                     </div>
 
                     {/* Search Bar - only on reports */}
@@ -109,7 +110,21 @@ export default function AdminLayout({ children }) {
                 </div>
 
                 {/* Header Right */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-10">
+                    {/* Page Actions (Conditional) */}
+                    {pathname === "/admin/users" && (
+                        <div className="flex items-center gap-4">
+                            <button className="flex items-center gap-2 px-6 py-2.5 bg-white rounded-full font-bold text-sm shadow-sm border border-gray-100 hover:bg-gray-50 transition-all">
+                                <HugeiconsIcon icon={FilterIcon} className="w-4 h-4 text-gray-600" />
+                                <span>Filter</span>
+                            </button>
+                            <button className="flex items-center gap-2 px-6 py-2.5 bg-white rounded-full font-bold text-sm shadow-sm border border-gray-100 hover:bg-gray-50 transition-all">
+                                <HugeiconsIcon icon={PlusSignIcon} className="w-4 h-4 text-gray-600" />
+                                <span>New User</span>
+                            </button>
+                        </div>
+                    )}
+
                     {/* User Profile */}
                     <div className="flex items-center gap-4">
                         <div className="flex flex-col items-end">
@@ -129,11 +144,12 @@ export default function AdminLayout({ children }) {
                 </div>
             </header>
 
+
             {/* Main Area (Sidebar + Content) */}
             <div className="flex flex-1 gap-8 overflow-hidden h-full">
                 {/* Sidebar */}
                 <aside className={`
-                    relative w-64 bg-white z-50 rounded-[2rem] flex flex-col py-8 px-6 overflow-y-auto custom-scrollbar shrink-0
+                    relative w-64 bg-white z-50 rounded-[2rem] flex flex-col py-8 px-6 overflow-y-auto scrollbar-hide shrink-0
                 `}>
 
                     {/* Main Nav */}
@@ -144,10 +160,11 @@ export default function AdminLayout({ children }) {
                                     key={item.href}
                                     href={item.href}
                                     className={`
-                                        flex items-center gap-3 px-6 py-3 rounded-full font-bold text-sm transition-all border border-[#ffc107] text-gray-900 hover:bg-yellow-50
+                                        flex items-center gap-3 px-6 py-3 rounded-full font-bold text-sm transition-all border border-[#ffc107]
+                                        ${pathname === item.href ? 'bg-[#ffc107] text-gray-900' : 'bg-white text-gray-900 hover:bg-yellow-50'}
                                     `}
                                 >
-                                    <HugeiconsIcon icon={item.icon} className="w-5 h-5 text-gray-600" />
+                                    <HugeiconsIcon icon={item.icon} className={`w-5 h-5 ${pathname === item.href ? 'text-gray-900' : 'text-gray-600'}`} />
                                     <span>{item.label}</span>
                                 </Link>
                             );
@@ -161,14 +178,17 @@ export default function AdminLayout({ children }) {
                         </h3>
                         <div className="space-y-4">
                             {quickActions.map((action, idx) => (
-                                <button
+                                <Link
                                     key={idx}
-                                    disabled
-                                    className="w-full flex items-center justify-start gap-3 px-6 py-3 rounded-full border border-[#ffc107] text-gray-900 font-bold text-sm hover:bg-yellow-50 transition-all disabled:opacity-50"
+                                    href={action.href}
+                                    className={`
+                                        w-full flex items-center justify-start gap-3 px-6 py-3 rounded-full border border-[#ffc107] font-bold text-sm transition-all
+                                        ${pathname === action.href ? 'bg-[#ffc107] text-gray-900' : 'bg-white text-gray-900 hover:bg-yellow-50'}
+                                    `}
                                 >
-                                    <HugeiconsIcon icon={action.icon} className="w-4 h-4 text-gray-600" />
+                                    <HugeiconsIcon icon={action.icon} className={`w-4 h-4 ${pathname === action.href ? 'text-gray-900' : 'text-gray-600'}`} />
                                     <span>{action.label}</span>
-                                </button>
+                                </Link>
                             ))}
                         </div>
                     </div>
@@ -178,13 +198,13 @@ export default function AdminLayout({ children }) {
                         onClick={handleLogout}
                         className="w-full flex items-center justify-start gap-2 px-6 py-4 text-red-500 font-medium text-sm hover:bg-red-50 rounded-full transition-all mt-8"
                     >
-                        <HugeiconsIcon icon={Logout01Icon} className="w-5 h-5" />
+                        <HugeiconsIcon icon={LogoutCircle02Icon} className="w-5 h-5" />
                         <span>Step Out</span>
                     </button>
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 min-w-0 overflow-y-auto custom-scrollbar h-full pr-4">
+                <main className="flex-1 min-w-0 overflow-y-auto scrollbar-hide h-full pr-4">
                     {children}
                 </main>
             </div>
