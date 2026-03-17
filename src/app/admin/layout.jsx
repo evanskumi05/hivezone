@@ -16,6 +16,7 @@ import {
     FilterIcon,
     PlusSignIcon,
     SentIcon,
+    Analytics01Icon,
     ReloadIcon
 } from "@hugeicons/core-free-icons";
 import { createClient } from "@/utils/supabase/client";
@@ -247,6 +248,7 @@ export default function AdminLayout({ children }) {
 
     const quickActions = [
         { label: "User Manager", href: "/admin/users", icon: UserGroupIcon },
+        { label: "User Statistics", href: "/admin/analytics", icon: Analytics01Icon },
         { label: "Send SMS", href: "/admin/contacts/send", icon: SentIcon },
     ];
 
@@ -299,7 +301,7 @@ export default function AdminLayout({ children }) {
             <div className="flex flex-1 gap-8 overflow-hidden h-full">
                 {/* Sidebar */}
                 <aside className={`
-                    relative w-64 bg-white z-50 rounded-[2rem] flex flex-col py-8 px-6 overflow-y-auto scrollbar-hide shrink-0
+                    relative w-64 bg-white z-50 rounded-[2rem] flex flex-col pb-5 py-8 px-6 overflow-y-auto scrollbar-hide shrink-0
                 `}>
 
                     {/* Main Nav */}
