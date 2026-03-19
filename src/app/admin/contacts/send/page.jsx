@@ -24,6 +24,7 @@ function SMSComposer() {
 
     const [recipient, setRecipient] = useState(phoneFromUrl);
     const [message, setMessage] = useState("");
+    const [sendToAll, setSendToAll] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [templates, setTemplates] = useState([]);
     const [loadingTemplates, setLoadingTemplates] = useState(true);
@@ -61,10 +62,16 @@ function SMSComposer() {
 
     const handleSend = async (e) => {
         e.preventDefault();
-        if (!recipient || !message) {
+        if ((!recipient && !sendToAll) || !message) {
             showToast("Please fill in both recipient and message", "error");
             return;
         }
+
+        const confirmMessage = sendToAll 
+            ? "Are you sure you want to send this SMS to ALL users? This action cannot be undone."
+            : `Send this SMS to ${recipient}?`;
+
+        if (!window.confirm(confirmMessage)) return;
 
         setIsSending(true);
         try {
@@ -72,17 +79,19 @@ function SMSComposer() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    recipients: recipient,
-                    message: message
+                    recipients: sendToAll ? null : recipient,
+                    message: message,
+                    sendToAll: sendToAll,
+                    name: nameFromUrl
                 })
             });
 
             const result = await response.json();
 
             if (result.success) {
-                showToast("SMS sent successfully!", "success");
+                showToast(`SMS sent successfully ${sendToAll ? `to ${result.count} users` : ''}!`, "success");
                 setMessage("");
-                setRecipient("");
+                if (!sendToAll) setRecipient("");
             } else {
                 showToast(result.error || "Failed to send SMS", "error");
             }
@@ -130,17 +139,39 @@ function SMSComposer() {
 
                     {/* Recipient */}
                     <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
-                            <HugeiconsIcon icon={UserCircleIcon} className="w-3.5 h-3.5" />
-                            Recipient Number
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="+233..."
-                            value={recipient}
-                            onChange={(e) => setRecipient(e.target.value)}
-                            className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[#ffc107]/50 transition-all placeholder:text-gray-300"
-                        />
+                        <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                                <HugeiconsIcon icon={UserCircleIcon} className="w-3.5 h-3.5" />
+                                Recipient Number
+                            </label>
+                            
+                            <label className="flex items-center gap-2 cursor-pointer group">
+                                <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${sendToAll ? 'text-[#ffc107]' : 'text-gray-400 group-hover:text-gray-600'}`}>
+                                    Send to All Users
+                                </span>
+                                <div 
+                                    onClick={() => setSendToAll(!sendToAll)}
+                                    className={`w-8 h-4 rounded-full p-0.5 transition-all duration-300 ${sendToAll ? 'bg-[#ffc107]' : 'bg-gray-200'}`}
+                                >
+                                    <div className={`w-3 h-3 bg-white rounded-full transition-all duration-300 ${sendToAll ? 'translate-x-4' : 'translate-x-0'}`} />
+                                </div>
+                            </label>
+                        </div>
+                        
+                        {!sendToAll ? (
+                            <input
+                                type="text"
+                                placeholder="+233..."
+                                value={recipient}
+                                onChange={(e) => setRecipient(e.target.value)}
+                                className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[#ffc107]/50 transition-all placeholder:text-gray-300"
+                            />
+                        ) : (
+                            <div className="w-full bg-[#ffc107]/5 border-2 border-dashed border-[#ffc107]/30 rounded-xl px-4 py-3 text-sm font-bold text-[#ffc107] flex items-center gap-2 italic">
+                                <HugeiconsIcon icon={InformationCircleIcon} className="w-4 h-4" />
+                                Sending to all registered users
+                            </div>
+                        )}
                     </div>
 
                     {/* Message Body */}
