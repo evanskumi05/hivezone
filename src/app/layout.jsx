@@ -86,9 +86,14 @@ export const metadata = {
   },
   icons: {
     icon: "/logoIcon.svg",
-    apple: "/logoIcon.svg",
+    apple: "/appIcon.png",
   },
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "HiveZone",
+  },
 };
 
 export const viewport = {

@@ -18,7 +18,7 @@ const ImageModal = ({ src, onClose }) => {
             const link = document.createElement('a');
             link.href = url;
             const ext = isVideo ? 'mp4' : 'jpg';
-            link.download = `campushive-media-${Date.now()}.${ext}`;
+            link.download = `HiveZone-media-${Date.now()}.${ext}`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

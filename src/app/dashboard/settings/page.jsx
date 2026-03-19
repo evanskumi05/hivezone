@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertIcon, ArrowLeft01Icon, Camera01Icon } from "@hugeicons/core-free-icons";
+import { AlertIcon, ArrowLeft01Icon, Camera01Icon, Download01Icon } from "@hugeicons/core-free-icons";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useRef } from "react";
 
@@ -13,6 +13,7 @@ import { useRef } from "react";
 const menuItems = [
     { id: "profile", label: "Edit Profile" },
     { id: "password", label: "Change Password" },
+    { id: "install", label: "Install App" },
     { id: "delete", label: "Delete Account", isDestructive: true }
 ];
 
@@ -371,6 +372,25 @@ export default function SettingsPage() {
                     )}
 
                     {/* Views for notifications and privacy are removed for now */}
+
+                    {/* View: Install App */}
+                    {activeTab === "install" && (
+                        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm flex flex-col items-center justify-center min-h-[300px] text-center">
+                            <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
+                                <HugeiconsIcon icon={Download01Icon} className="w-8 h-8 text-[#ffc107]" />
+                            </div>
+                            <h3 className="text-xl font-black text-gray-900 mb-2 font-newyork">Install HiveZone App</h3>
+                            <p className="text-gray-500 font-medium text-sm max-w-xs mb-8">
+                                Install HiveZone on your device for quick access, offline support, and push notifications.
+                            </p>
+                            <button
+                                onClick={() => window.dispatchEvent(new Event('hivezone-show-pwa-install'))}
+                                className="font-extrabold text-[15px] bg-[#ffc107] text-gray-900 px-8 py-3 rounded-full hover:bg-yellow-400 transition-colors active:scale-[0.98] shadow-lg shadow-yellow-100"
+                            >
+                                Open Install Modal
+                            </button>
+                        </div>
+                    )}
 
                     {/* View: Delete Account (Beta Message) */}
                     {activeTab === "delete" && (
