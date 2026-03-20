@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import CustomDropdown from "@/components/CustomDropdown";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
+import { validateDisplayName, validateStudentId, validatePhone, validateDateOfBirth } from "@/utils/validation";
 
 const INSTITUTIONS = [
     "Knutsford University",
@@ -148,6 +149,18 @@ const OnboardingForm = () => {
             setError("Please fill in all the details.");
             return;
         }
+
+        const displayNameError = validateDisplayName(displayName.trim());
+        if (displayNameError) { setError(displayNameError); return; }
+
+        const studentIdError = validateStudentId(studentId.trim());
+        if (studentIdError) { setError(studentIdError); return; }
+
+        const phoneError = validatePhone(contact.trim());
+        if (phoneError) { setError(phoneError); return; }
+
+        const dobError = validateDateOfBirth(dateOfBirth);
+        if (dobError) { setError(dobError); return; }
 
         setLoading(true);
         const supabase = createClient();

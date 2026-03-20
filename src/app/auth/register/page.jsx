@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
 import { createClient } from "@/utils/supabase/client";
+import { validateName, validateUsername, validateEmail, validatePassword } from "@/utils/validation";
 
 const RegisterPage = () => {
     const router = useRouter();
@@ -64,28 +65,20 @@ const RegisterPage = () => {
             return;
         }
 
-        // Name validation: Letters and spaces only, 2-50 characters
-        const nameRegex = /^[a-zA-Z\s]{2,50}$/;
-        if (!nameRegex.test(cleanFirstName)) {
-            setError("First name can only contain letters and spaces, and must be 2-50 characters long. No special characters or emojis allowed.");
-            return;
-        }
-        if (!nameRegex.test(cleanLastName)) {
-            setError("Last name can only contain letters and spaces, and must be 2-50 characters long. No special characters or emojis allowed.");
-            return;
-        }
+        const firstNameError = validateName(cleanFirstName, "First name");
+        if (firstNameError) { setError(firstNameError); return; }
 
-        // Username validation: 3-20 characters, alphanumeric and underscores only
-        const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-        if (!usernameRegex.test(cleanUsername)) {
-            setError("Username must be 3-20 characters long and can only contain letters, numbers, and underscores. No special characters or emojis allowed.");
-            return;
-        }
+        const lastNameError = validateName(cleanLastName, "Last name");
+        if (lastNameError) { setError(lastNameError); return; }
 
-        if (password.length < 6) {
-            setError("Password must be at least 6 characters long.");
-            return;
-        }
+        const usernameError = validateUsername(cleanUsername);
+        if (usernameError) { setError(usernameError); return; }
+
+        const emailError = validateEmail(cleanEmail);
+        if (emailError) { setError(emailError); return; }
+
+        const passwordError = validatePassword(password);
+        if (passwordError) { setError(passwordError); return; }
 
         if (password !== confirmPassword) {
             setError("Passwords do not match.");
