@@ -211,7 +211,7 @@ export default function FeedDetailPage() {
             if (session) {
                 const { data: profileData } = await supabase
                     .from("users")
-                    .select("*")
+                    .select("id, display_name, first_name, profile_picture")
                     .eq("id", session.user.id)
                     .single();
                 setProfile(profileData);

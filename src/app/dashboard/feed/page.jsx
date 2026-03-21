@@ -174,7 +174,7 @@ export default function DedicatedFeedPage() {
             if (session) {
                 const { data: profileData } = await supabase
                     .from("users")
-                    .select("*")
+                    .select("id, institution, profile_picture, display_name, first_name")
                     .eq("id", session.user.id)
                     .single();
                 setProfile(profileData);

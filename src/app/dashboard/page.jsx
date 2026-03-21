@@ -28,7 +28,7 @@ export default function DashboardPage() {
             // Fetch profile data from public.users table
             const { data: profileData } = await supabase
                 .from("users")
-                .select("*")
+                .select("first_name, email")
                 .eq("id", session.user.id)
                 .single();
 

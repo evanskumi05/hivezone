@@ -40,7 +40,7 @@ function SearchResults() {
                 setCurrentUserId(session.user.id);
                 const { data: profileData } = await supabase
                     .from("users")
-                    .select("*")
+                    .select("id, institution, display_name, first_name")
                     .eq("id", session.user.id)
                     .single();
                 setProfile(profileData);
@@ -62,8 +62,8 @@ function SearchResults() {
         setLoading(true);
         if (tab === 'profiles') {
             const { data, error } = await supabase
-                .from('users')
-                .select('*')
+                .from('public_users')
+                .select('id, display_name, username, profile_picture, is_verified, is_admin, bio')
                 .eq('institution', institution)
                 .or(`display_name.ilike.%${searchTerm}%,username.ilike.%${searchTerm}%`)
                 .limit(20);

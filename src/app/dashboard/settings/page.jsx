@@ -48,7 +48,7 @@ export default function SettingsPage() {
             // Fetch profile data from public.users table
             const { data: userProfile } = await supabase
                 .from("users")
-                .select("*")
+                .select("id, display_name, username, bio, profile_picture")
                 .eq("id", session.user.id)
                 .single();
 

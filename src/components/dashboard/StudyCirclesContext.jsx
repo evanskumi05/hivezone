@@ -112,7 +112,7 @@ export const StudyCirclesProvider = ({ children }) => {
         try {
             const { data: profileData } = await supabase
                 .from("users")
-                .select("*")
+                .select("id")
                 .eq("id", userId)
                 .single();
 

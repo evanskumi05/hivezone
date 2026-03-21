@@ -55,7 +55,7 @@ export default function ProfilePage() {
             // Fetch profile data from public.users table
             const { data: profileData } = await supabase
                 .from("users")
-                .select("*")
+                .select("id, username, display_name, profile_picture, cover_photo, bio, skills, portfolio_links, institution, programme, year_of_study, is_verified, is_admin")
                 .eq("id", session.user.id)
                 .single();
 

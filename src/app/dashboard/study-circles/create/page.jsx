@@ -44,7 +44,7 @@ export default function CreateCirclePage() {
 
             const { data: profileData } = await supabase
                 .from("users")
-                .select("*")
+                .select("id")
                 .eq("id", session.user.id)
                 .single();
             setProfile(profileData);

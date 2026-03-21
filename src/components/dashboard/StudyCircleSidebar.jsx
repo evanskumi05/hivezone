@@ -59,7 +59,7 @@ export default function StudyCircleSidebar({ activeId, isMobileVisible = true })
         try {
             const { data: profileData } = await supabase
                 .from("users")
-                .select("*")
+                .select("id")
                 .eq("id", userId)
                 .single();
 

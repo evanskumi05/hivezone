@@ -113,7 +113,7 @@ export default function StudyCircleDetailPage() {
             if (session) {
                 const { data: profileData } = await supabase
                     .from("users")
-                    .select("*")
+                    .select("id, display_name, profile_picture, email")
                     .eq("id", session.user.id)
                     .single();
                 setProfile(profileData || session.user);

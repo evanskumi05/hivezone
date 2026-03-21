@@ -111,7 +111,7 @@ const Navbar = () => {
             if (session) {
                 const { data, error } = await supabase
                     .from("users")
-                    .select("*")
+                    .select("id, display_name, first_name, username, profile_picture, is_admin")
                     .eq("id", session.user.id)
                     .single();
                 if (data) {

@@ -43,14 +43,14 @@ export default function PublicProfilePage() {
             setCurrentUserId(loggedInId);
 
             if (loggedInId) {
-                const { data: currProfile } = await supabase.from('users').select('*').eq('id', loggedInId).single();
+                const { data: currProfile } = await supabase.from('users').select('id, display_name, first_name, profile_picture').eq('id', loggedInId).single();
                 setCurrentUserProfile(currProfile);
             }
 
             // Fetch profile data from public.users table using the URL parameter
             const { data: profileData, error } = await supabase
-                .from("users")
-                .select("*")
+                .from("public_users")
+                .select("id, username, display_name, profile_picture, cover_photo, bio, skills, portfolio_links, institution, programme, year_of_study, is_verified, is_admin")
                 .ilike("username", params.username)
                 .single();
 
