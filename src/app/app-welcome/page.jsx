@@ -7,7 +7,7 @@ export default function AppWelcomePage() {
                 Welcome to HiveZone
             </h1>
             <p className="text-lg text-gray-600 mb-10 max-w-sm mx-auto">
-                Connect with peers, find local campus gigs, and thrive in your zone.
+                Connect with peers, find local campus gigs, and thrive in your campus.
             </p>
             
             {/* Placeholder for future onboarding carousel */}
