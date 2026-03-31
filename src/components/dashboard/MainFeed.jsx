@@ -484,25 +484,27 @@ export default function MainFeed({ onPostsReady }) {
 
     return (
         <div className="flex flex-col gap-4 w-full">
-            {/* Header / Tabs */}
-            <div className="flex items-center justify-between mt-4 mb-2">
+            {/* Header */}
+            <div className="flex items-center justify-between mt-4 mb-0">
                 <h2 className="text-2xl sm:text-3xl font-black tracking-wide font-newyork text-gray-900 leading-none">
                     Campus Feed
                 </h2>
-                <div className="flex gap-2">
-                    {['all', 'trending'].map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => handleTabChange(tab)}
-                            className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all capitalize ${activeTab === tab
-                                ? 'bg-[#ffc107] text-black shadow-sm'
-                                : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
-                                }`}
-                        >
-                            {tab === 'all' ? 'Recent' : 'Trending'}
-                        </button>
-                    ))}
-                </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="border-b border-gray-200 flex items-center mb-2">
+                {['all', 'trending'].map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => handleTabChange(tab)}
+                        className={`flex-1 pb-3 px-1 font-black text-[15px] transition-all relative ${
+                            activeTab === tab ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'
+                        }`}
+                    >
+                        {tab === 'all' ? 'All' : 'Trending'}
+                        {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#ffc107] rounded-full" />}
+                    </button>
+                ))}
             </div>
 
             {/* Create Post Input */}
