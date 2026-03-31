@@ -11,6 +11,8 @@ import {
 import Avatar from "@/components/ui/Avatar";
 import { useRouter } from 'next/navigation';
 
+import { requestNotificationPermission, getNotificationPermissionStatus } from "@/utils/OneSignalNative";
+
 const NotificationDrawer = ({
     isOpen,
     onClose,
@@ -25,6 +27,25 @@ const NotificationDrawer = ({
 }) => {
     const router = useRouter();
     const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [hasPushPermission, setHasPushPermission] = useState(true);
+
+    React.useEffect(() => {
+        if (isOpen) {
+            checkPermission();
+        }
+    }, [isOpen]);
+
+    const checkPermission = async () => {
+        const status = await getNotificationPermissionStatus();
+        setHasPushPermission(status === true || status === 'granted');
+    };
+
+    const handleEnablePush = async () => {
+        const accepted = await requestNotificationPermission();
+        if (accepted) {
+            setHasPushPermission(true);
+        }
+    };
 
     const handleNotificationClick = async (notif) => {
         onClose();
@@ -115,6 +136,33 @@ const NotificationDrawer = ({
 
                                 {/* Content */}
                                 <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
+                                    {/* Push Notification Opt-in Banner */}
+                                    {!hasPushPermission && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="mb-4 p-5 bg-[#ffc107] rounded-[2rem] shadow-lg shadow-[#ffc107]/20 relative overflow-hidden group"
+                                        >
+                                            <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors duration-500" />
+                                            
+                                            <div className="relative flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 border border-white/20">
+                                                    <HugeiconsIcon icon={Notification01Icon} className="w-6 h-6 text-white" strokeWidth={2.5} />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="text-white font-black text-sm mb-0.5 tracking-tight">Stay in the Hive!</p>
+                                                    <p className="text-white/90 text-[12px] font-bold leading-tight">Enable push notifications to never miss a gig or message.</p>
+                                                </div>
+                                                <button
+                                                    onClick={handleEnablePush}
+                                                    className="px-4 py-2 bg-white text-[#ffc107] font-black text-[12px] rounded-xl hover:scale-105 active:scale-95 transition-all shadow-sm"
+                                                >
+                                                    Keep me updated
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    )}
+
                                     {notifications.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center h-full text-center px-6">
                                             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">

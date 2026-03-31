@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { initOneSignal, loginOneSignal, logoutOneSignal } from "@/utils/OneSignalNative";
 
 export default function OneSignalInit() {
     const supabase = createClient();
@@ -9,17 +10,15 @@ export default function OneSignalInit() {
     useEffect(() => {
         const initOneSignalUser = async () => {
             const { data: { session } } = await supabase.auth.getSession();
+            
+            // Initialize OneSignal (Handles both Web and Native)
+            await initOneSignal();
+
             if (session?.user?.id) {
-                if (window.OneSignalDeferred) {
-                    window.OneSignalDeferred.push(async function (OneSignal) {
-                        try {
-                            await OneSignal.login(session.user.id);
-                            // Prompt the user to subscribe if they haven't already
-                            await OneSignal.Slidedown.promptPush();
-                        } catch (e) {
-                            // Silence OneSignal login errors
-                        }
-                    });
+                try {
+                    await loginOneSignal(session.user.id);
+                } catch (e) {
+                    // Silence OneSignal login errors
                 }
             }
         };
@@ -29,23 +28,17 @@ export default function OneSignalInit() {
         // Listen for auth changes
         const { data: authListener } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                if (window.OneSignalDeferred) {
-                    if (event === 'SIGNED_IN' && session?.user?.id) {
-                        window.OneSignalDeferred.push(async function (OneSignal) {
-                            try {
-                                await OneSignal.login(session.user.id);
-                            } catch (e) {
-                                // Silence
-                            }
-                        });
-                    } else if (event === 'SIGNED_OUT') {
-                        window.OneSignalDeferred.push(async function (OneSignal) {
-                            try {
-                                await OneSignal.logout();
-                            } catch (e) {
-                                // Silence
-                            }
-                        });
+                if (event === 'SIGNED_IN' && session?.user?.id) {
+                    try {
+                        await loginOneSignal(session.user.id);
+                    } catch (e) {
+                        // Silence
+                    }
+                } else if (event === 'SIGNED_OUT') {
+                    try {
+                        await logoutOneSignal();
+                    } catch (e) {
+                        // Silence
                     }
                 }
             }

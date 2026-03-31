@@ -16,7 +16,6 @@ test.md
 
 # next.js
 /.next/
-/out/
 
 # production
 /build
@@ -43,7 +42,6 @@ next-env.d.ts
 
 
 # capacitor
-/android
 /ios
 /www
 build_output.txt
