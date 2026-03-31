@@ -549,37 +549,37 @@ export default function FeedDetailPage() {
             <style>{heartPop}</style>
             <div className="max-w-[700px] mx-auto w-full p-3 sm:p-8 pt-0">
                 {/* Header */}
-                <div className="flex items-center gap-4 sm:gap-6 mt-4 sm:mt-8 mb-4 sm:mb-6 sticky top-0 py-2 bg-[#fcf6de]/95 backdrop-blur z-20">
+                <div className="flex items-center gap-4 mt-4 sm:mt-6 mb-3 sm:mb-4 sticky top-0 py-2 bg-[#fcf6de]/95 backdrop-blur z-20">
                     <button
                         onClick={() => router.back()}
                         className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 transition-all shadow-sm active:scale-90"
                     >
                         <HugeiconsIcon icon={ArrowLeft01Icon} className="w-5 h-5 text-gray-700" />
                     </button>
-                    <h1 className="text-xl sm:text-3xl font-black tracking-tight font-newyork text-gray-900 leading-tight">Post</h1>
+                    <h1 className="text-lg sm:text-xl font-black tracking-tight font-newyork text-gray-900 leading-tight">Post</h1>
                 </div>
 
                 {/* Main Post Content */}
-                <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-8 shadow-sm border border-gray-100/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                    <div className="flex items-center justify-between mb-4">
+                <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                    <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                             <Link href={`/dashboard/profile/${post.author?.username}`}>
                                 <Avatar
                                     src={post.author?.profile_picture}
                                     name={post.author?.display_name}
-                                    className="w-12 h-12 rounded-full border-2 border-gray-100"
+                                    className="w-10 h-10 rounded-full border-2 border-gray-100"
                                 />
                             </Link>
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-gray-900 text-[18px] tracking-tight">{post.author?.display_name}</span>
+                                    <span className="font-bold text-gray-900 text-[15px] tracking-tight">{post.author?.display_name}</span>
                                     <UserBadge 
                                         isAdmin={post.author?.is_admin} 
                                         isVerified={post.author?.is_verified} 
-                                        size="md"
+                                        size="sm"
                                     />
                                 </div>
-                                <span className="text-gray-500 text-[15px] font-medium leading-none">@{post.author?.username}</span>
+                                <span className="text-gray-500 text-[13px] font-medium leading-none">@{post.author?.username}</span>
                             </div>
                         </div>
 
@@ -607,12 +607,12 @@ export default function FeedDetailPage() {
                         </div>
                     </div>
 
-                    <div className="mt-5">
-                        <Linkify text={post.content} className="text-gray-900 text-[1.25rem] sm:text-[1.5rem] leading-[1.3] font-semibold tracking-tight break-words pr-2" />
+                    <div className="mt-3">
+                        <Linkify text={post.content} className="text-gray-900 text-[1rem] sm:text-[1.1rem] leading-[1.5] font-semibold tracking-tight break-words pr-2" />
                     </div>
 
                     {post.media_url && (
-                        <div className="relative mt-6 rounded-[1.5rem] sm:rounded-[2rem] overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group/media">
+                        <div className="relative mt-4 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group/media">
                             {post.media_url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
                                 <AutoPauseVideo src={post.media_url} className="w-full max-h-[600px] object-contain transition-transform duration-700 group-hover/media:scale-[1.01]" onClick={() => showImage(post.media_url)} />
                             ) : (
@@ -621,32 +621,32 @@ export default function FeedDetailPage() {
                         </div>
                     )}
 
-                    <div className="mt-8 py-5 border-y border-gray-50 flex items-center gap-10">
+                    <div className="mt-5 py-3 border-y border-gray-50 flex items-center gap-8">
                         <div className="flex items-center gap-2 group cursor-pointer" onClick={handleLike}>
-                            <span className="font-extrabold text-gray-900 text-lg">{post.likes_count}</span>
+                            <span className="font-extrabold text-gray-900 text-base">{post.likes_count}</span>
                             <span className="text-gray-500 font-bold tracking-wide uppercase text-xs group-hover:text-red-500 transition-colors">Likes</span>
                         </div>
                         <div className="flex items-center gap-2 group cursor-pointer">
-                            <span className="font-extrabold text-gray-900 text-lg">{post.comments_count}</span>
+                            <span className="font-extrabold text-gray-900 text-base">{post.comments_count}</span>
                             <span className="text-gray-500 font-bold tracking-wide uppercase text-xs group-hover:text-[#ffc107] transition-colors">Comments</span>
                         </div>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-around px-4">
+                    <div className="mt-3 flex items-center justify-around px-4">
                         <button
                             onClick={handleLike}
-                            className={`flex items-center gap-2 group p-3 rounded-full transition-all hover:bg-red-50 ${post.is_liked ? "text-red-500" : "text-gray-400 hover:text-red-500"}`}
+                            className={`flex items-center gap-2 group p-2 rounded-full transition-all hover:bg-red-50 ${post.is_liked ? "text-red-500" : "text-gray-400 hover:text-red-500"}`}
                         >
-                            <HugeiconsIcon icon={FavouriteIcon} className={`w-7 h-7 transition-all duration-300 ${post.is_liked ? "fill-current animate-heart-pop" : "group-hover:scale-110"}`} />
+                            <HugeiconsIcon icon={FavouriteIcon} className={`w-6 h-6 transition-all duration-300 ${post.is_liked ? "fill-current animate-heart-pop" : "group-hover:scale-110"}`} />
                         </button>
                         <button
                             onClick={() => {
                                 setReplyingTo('root');
                                 document.getElementById('root-reply-input')?.focus();
                             }}
-                            className="flex items-center gap-2 group p-3 rounded-full transition-all text-gray-400 hover:text-[#ffc107] hover:bg-amber-50"
+                            className="flex items-center gap-2 group p-2 rounded-full transition-all text-gray-400 hover:text-[#ffc107] hover:bg-amber-50"
                         >
-                            <HugeiconsIcon icon={Comment01Icon} className="w-7 h-7 transition-transform duration-300 group-hover:scale-110" />
+                            <HugeiconsIcon icon={Comment01Icon} className="w-6 h-6 transition-transform duration-300 group-hover:scale-110" />
                         </button>
                     </div>
                 </div>

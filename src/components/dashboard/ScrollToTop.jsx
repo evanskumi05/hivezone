@@ -7,6 +7,9 @@ export default function ScrollToTop() {
     const pathname = usePathname();
 
     useEffect(() => {
+        // Skip scroll to top for the main dashboard to allow feed restoration to work
+        if (pathname === "/dashboard") return;
+
         window.scrollTo({
             top: 0,
             left: 0,
