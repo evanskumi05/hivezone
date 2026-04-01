@@ -4,8 +4,8 @@ const config: CapacitorConfig = {
   appId: 'co.hivezone.app',
   appName: 'HiveZone',
   webDir: 'out',
-  bundledWebRuntime: false,
   server: {
+
     url: 'https://hivezone.co',
     cleartext: true
   },
@@ -22,9 +22,11 @@ const config: CapacitorConfig = {
     },
     StatusBar: {
       style: "DARK",
-      backgroundColor: "#ffc107",
-      overlaysWebView: true
+      backgroundColor: "#fcf6de",
+      overlaysWebView: false
     }
+
+
   },
   appendUserAgent: "CapacitorApp"
 };

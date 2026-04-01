@@ -8,8 +8,16 @@ export const CapacitorInit = () => {
         const initCapacitor = async () => {
             if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform()) {
                 try {
-                    // Set status bar to overlay the Webview
-                    await StatusBar.setOverlaysWebView({ overlay: true });
+                    // DO NOT overlay webview, allow the status bar to push content down
+                    await StatusBar.setOverlaysWebView({ overlay: false });
+                    
+                    // Set light background style (dark icons)
+                    await StatusBar.setStyle({ style: 'DARK' });
+                    
+                    // Set background color to dashboard cream
+                    await StatusBar.setBackgroundColor({ color: '#fcf6de' });
+
+
                 } catch (e) {
                     console.error('CapacitorInit: Error initializing StatusBar', e);
                 }
@@ -18,6 +26,7 @@ export const CapacitorInit = () => {
 
         initCapacitor();
     }, []);
+
 
     return null;
 };
