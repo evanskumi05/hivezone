@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useFeed } from "@/components/providers/FeedProvider";
@@ -13,9 +13,8 @@ import RecentGigs from "@/components/dashboard/RecentGigs";
 
 export default function DashboardPage() {
     const router = useRouter();
-    const [profile, setProfile] = useState(null);
     const supabase = createClient();
-    const { scrollPosition, setScrollPosition } = useFeed();
+    const { scrollPosition, setScrollPosition, pageProfile, setPageProfile } = useFeed();
     const scrollSaveRef = useRef(scrollPosition);
     const containerRef = useRef(null);
 
@@ -32,6 +31,7 @@ export default function DashboardPage() {
     };
 
     useEffect(() => {
+        if (pageProfile) return;
         const fetchUser = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) { router.push("/auth/signin"); return; }
@@ -40,7 +40,7 @@ export default function DashboardPage() {
                 .select("first_name, email")
                 .eq("id", session.user.id)
                 .single();
-            if (profileData) setProfile(profileData);
+            if (profileData) setPageProfile(profileData);
         };
         fetchUser();
     }, []);
@@ -62,7 +62,7 @@ export default function DashboardPage() {
             >
                 <div className="grid grid-cols-1 xl:grid-cols-[1fr_350px] gap-6 h-full items-start">
                     <div className="flex flex-col gap-8 max-w-[800px]">
-                        <WelcomeBanner firstName={profile?.first_name} email={profile?.email} />
+                        <WelcomeBanner firstName={pageProfile?.first_name} email={pageProfile?.email} />
                         <MainFeed onPostsReady={restoreScroll} />
                     </div>
                     <div className="flex flex-col gap-6 hidden lg:flex">

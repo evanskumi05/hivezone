@@ -18,6 +18,7 @@ export const FeedProvider = ({ children }) => {
     const [hasMore, setHasMore] = useState(true);
     const [activeTab, setActiveTab] = useState('all');
     const [scrollPosition, setScrollPosition] = useState(0);
+    const [pageProfile, setPageProfile] = useState(null);
 
     const resetFeed = () => {
         setPosts([]);
@@ -33,6 +34,7 @@ export const FeedProvider = ({ children }) => {
             hasMore, setHasMore,
             activeTab, setActiveTab,
             scrollPosition, setScrollPosition,
+            pageProfile, setPageProfile,
             resetFeed
         }}>
             {children}
