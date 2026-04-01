@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "202632460284",
+    "project_id": "hivezone-9af6e",
+    "storage_bucket": "hivezone-9af6e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:202632460284:android:642e92ca4f36c98309e479",
+        "android_client_info": {
+          "package_name": "co.hivezone.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQ-4iaC2aCJMR0P8PeBS06nEWwskH-1zU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:202632460284:android:d67c234cc3a9e9dd09e479",
+        "android_client_info": {
+          "package_name": "co.hivezone.co"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQ-4iaC2aCJMR0P8PeBS06nEWwskH-1zU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

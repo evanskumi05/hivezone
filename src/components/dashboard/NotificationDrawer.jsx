@@ -137,31 +137,36 @@ const NotificationDrawer = ({
                                 {/* Content */}
                                 <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
                                     {/* Push Notification Opt-in Banner */}
-                                    {!hasPushPermission && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="mb-4 p-5 bg-[#ffc107] rounded-[2rem] shadow-lg shadow-[#ffc107]/20 relative overflow-hidden group"
-                                        >
-                                            <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors duration-500" />
-                                            
-                                            <div className="relative flex items-center gap-4">
-                                                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 border border-white/20">
-                                                    <HugeiconsIcon icon={Notification01Icon} className="w-6 h-6 text-white" strokeWidth={2.5} />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className="text-white font-black text-sm mb-0.5 tracking-tight">Stay in the Hive!</p>
-                                                    <p className="text-white/90 text-[12px] font-bold leading-tight">Enable push notifications to never miss a gig or message.</p>
-                                                </div>
-                                                <button
-                                                    onClick={handleEnablePush}
-                                                    className="px-4 py-2 bg-white text-[#ffc107] font-black text-[12px] rounded-xl hover:scale-105 active:scale-95 transition-all shadow-sm"
-                                                >
-                                                    Keep me updated
-                                                </button>
+                                    {/* Push Notification Toggle Section */}
+                                    <div className="mb-4 p-4 bg-gray-50 border border-gray-100 rounded-[2rem] flex items-center justify-between shadow-sm group hover:border-[#ffc107]/30 transition-all duration-300">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-50">
+                                                <HugeiconsIcon icon={Notification01Icon} className={`w-5 h-5 ${hasPushPermission ? 'text-[#ffc107]' : 'text-gray-400'}`} strokeWidth={2} />
                                             </div>
-                                        </motion.div>
-                                    )}
+                                            <div className="flex flex-col">
+                                                <span className="text-[14px] font-black text-gray-900 tracking-tight">Push Alerts</span>
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                    {hasPushPermission ? 'Active' : 'Off'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={handleEnablePush}
+                                            disabled={hasPushPermission}
+                                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-500 outline-none
+                                                ${hasPushPermission ? 'bg-[#ffc107] shadow-lg shadow-yellow-100' : 'bg-gray-200'}
+                                                ${hasPushPermission ? 'cursor-default' : 'cursor-pointer hover:scale-105 active:scale-95'}
+                                            `}
+                                        >
+                                            <span className="sr-only">Toggle Push Alerts</span>
+                                            <span
+                                                className={`${
+                                                    hasPushPermission ? 'translate-x-6 bg-white shadow-sm' : 'translate-x-1.5 bg-gray-400'
+                                                } inline-block h-4.5 w-4.5 transform rounded-full transition-all duration-500 ease-in-out`}
+                                            />
+                                        </button>
+                                    </div>
 
                                     {notifications.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center h-full text-center px-6">

@@ -8,7 +8,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertIcon, ArrowLeft01Icon, Camera01Icon, Notification01Icon } from "@hugeicons/core-free-icons";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useRef } from "react";
-import { getNotificationPermissionStatus, requestNotificationPermission } from "@/utils/OneSignalNative";
+import { getNotificationPermissionStatus, requestNotificationPermission, loginOneSignal } from "@/utils/OneSignalNative";
 
 // Menu items based on the user's design image
 const menuItems = [
@@ -65,6 +65,11 @@ export default function SettingsPage() {
             }
 
             setLoading(false);
+            
+            // Sync with OneSignal for better tracking
+            if (session.user.id) {
+                loginOneSignal(session.user.id);
+            }
         };
 
         fetchUser();
@@ -424,26 +429,51 @@ export default function SettingsPage() {
                                 Stay updated on local campus gigs, study circle messages, and important alerts in your zone.
                             </p>
 
-                            <div className="flex flex-col items-center gap-4 w-full">
-                                <div className={`px-4 py-2 rounded-full text-[11px] font-black uppercase tracking-widest border
-                                    ${notificationPermission === 'granted' ? 'bg-green-50 text-green-600 border-green-100' : 
-                                      notificationPermission === 'denied' ? 'bg-red-50 text-red-600 border-red-100' : 
-                                      'bg-gray-50 text-gray-400 border-gray-100'}
-                                `}>
-                                    Status: {notificationPermission === 'default' ? 'Not Set' : notificationPermission}
-                                </div>
-
-                                {notificationPermission !== 'granted' ? (
+                            <div className="flex flex-col items-center gap-6 w-full max-w-sm">
+                                {/* Toggle Control */}
+                                <div className="w-full bg-gray-50 border border-gray-100 rounded-3xl p-5 flex items-center justify-between shadow-sm group hover:border-[#ffc107]/30 transition-all duration-300">
+                                    <div className="flex flex-col items-start gap-0.5">
+                                        <span className="text-[15px] font-black text-gray-900 tracking-tight">Push Notifications</span>
+                                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                                            {notificationPermission === 'granted' ? 'Enabled' : 'Disabled'}
+                                        </span>
+                                    </div>
+                                    
                                     <button
                                         onClick={handleEnableNotifications}
-                                        disabled={checkingNotifications}
-                                        className="font-extrabold text-[15px] bg-[#ffc107] text-gray-900 px-8 py-3 rounded-full hover:bg-yellow-400 transition-colors active:scale-[0.98] shadow-lg shadow-yellow-100 disabled:opacity-50"
+                                        disabled={checkingNotifications || notificationPermission === 'denied'}
+                                        className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-500 outline-none
+                                            ${notificationPermission === 'granted' ? 'bg-[#ffc107] shadow-lg shadow-yellow-100' : 'bg-gray-200'}
+                                            ${checkingNotifications ? 'opacity-50 cursor-wait' : 'cursor-pointer hover:scale-105 active:scale-95'}
+                                            ${notificationPermission === 'denied' ? 'opacity-30 grayscale cursor-not-allowed' : ''}
+                                        `}
                                     >
-                                        {checkingNotifications ? "Please Wait..." : "Enable Notifications"}
+                                        <span className="sr-only">Toggle Push Notifications</span>
+                                        <span
+                                            className={`${
+                                                notificationPermission === 'granted' ? 'translate-x-7 bg-white shadow-sm' : 'translate-x-1.5 bg-gray-400'
+                                            } inline-block h-5 w-5 transform rounded-full transition-all duration-500 ease-in-out`}
+                                        />
                                     </button>
-                                ) : (
-                                    <div className="text-[13px] text-gray-400 font-medium">
-                                        Notifications are currently active on this device.
+                                </div>
+
+                                {/* Status Messages */}
+                                {notificationPermission === 'denied' && (
+                                    <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 text-left">
+                                        <HugeiconsIcon icon={AlertIcon} size={18} className="text-red-500 shrink-0 mt-0.5" />
+                                        <div className="flex flex-col gap-1">
+                                            <p className="text-[13px] font-black text-red-900 leading-tight">Access Denied</p>
+                                            <p className="text-[12px] font-medium text-red-600 leading-relaxed">
+                                                To enable notifications, please go to your device's <b>Settings &gt; Apps &gt; HiveZone</b> and allow permissions manually.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {notificationPermission === 'granted' && (
+                                    <div className="flex items-center gap-2 text-[#ffc107] font-bold text-[12px] tracking-wide">
+                                        <span className="w-1.5 h-1.5 bg-[#ffc107] rounded-full animate-pulse shadow-glow shadow-yellow-400" />
+                                        ACTIVE ON THIS DEVICE
                                     </div>
                                 )}
                             </div>
