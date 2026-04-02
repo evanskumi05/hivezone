@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
 import { useFeed } from "@/components/providers/FeedProvider";
@@ -12,64 +12,55 @@ import {
     Attachment01Icon,
     Cancel01Icon,
 } from "@hugeicons/core-free-icons";
+import { Virtuoso } from "react-virtuoso";
 import FeedPostCard from "@/components/FeedPostCard";
+import WelcomeBanner from "@/components/dashboard/WelcomeBanner";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { compressForFeed } from "@/utils/compressImage";
 
-export default function MainFeed({ onPostsReady }) {
+const MainFeed = React.forwardRef(({ onPostsReady, pageProfile: bannerProfile }, ref) => {
     const { showToast, confirmAction, openReportModal } = useUI();
+    const queryClient = useQueryClient();
     const {
-        posts, setPosts,
-        page, setPage,
-        hasMore, setHasMore,
         activeTab, setActiveTab,
-        scrollPosition, setScrollPosition
+        pageProfile: contextProfile,
+        setPageProfile
     } = useFeed();
 
-    const [profile, setProfile] = useState(null);
-    const [loading, setLoading] = useState(posts.length === 0);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const limit = 15;
-
+    // Use either bannerProfile (from Dash) or contextProfile (cached)
+    const profile = bannerProfile || contextProfile;
+    
     const [postContent, setPostContent] = useState("");
     const [isPosting, setIsPosting] = useState(false);
     const [selectedMedia, setSelectedMedia] = useState(null);
     const [mediaPreview, setMediaPreview] = useState(null);
-    const [mediaType, setMediaType] = useState("image"); // 'image' or 'video'
+    const [mediaType, setMediaType] = useState("image");
     const fileInputRef = useRef(null);
     const supabase = useRef(createClient()).current;
-    const profileRef = useRef(null);
-    const pageRef = useRef(page);
-    const loadingMoreRef = useRef(false);
-    const hasMoreRef = useRef(hasMore);
-    const setProfileWithRef = (p) => { profileRef.current = p; setProfile(p); };
+    
+    // Virtuoso State
+    const virtuosoRef = useRef(null);
+    const limit = 15;
 
-    const fetchPosts = async (pageNumber = 0, isInitial = false, tab = activeTab, userInstitution = null) => {
-        if (!isInitial && loadingMoreRef.current) return;
-        try {
-            if (isInitial) {
-                setLoading(true);
-                setPosts([]);
-            } else {
-                loadingMoreRef.current = true;
-                setLoadingMore(true);
-            }
+    /**
+     * CORE: THE CACHED DATA ENGINE (React Query)
+     */
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+        refetch,
+    } = useInfiniteQuery({
+        queryKey: ['FEED_STREAM', activeTab, profile?.institution],
+        queryFn: async ({ pageParam = 0 }) => {
+            const currentInstitution = profile?.institution;
+            if (!currentInstitution) return [];
 
-            const targetInstitution = userInstitution || profileRef.current?.institution;
-            if (!targetInstitution) {
-                setLoading(false);
-                setLoadingMore(false);
-                return;
-            }
-
-            let finalPosts = [];
-            let moreAvailable = false;
-
-            if (tab === 'trending') {
-                if (pageNumber > 0) {
-                    setHasMore(false);
-                    setLoadingMore(false);
-                    return;
-                }
-
+            if (activeTab === 'trending') {
+                if (pageParam > 0) return []; 
+                
                 const { data: feedsData, error } = await supabase
                     .from("feeds")
                     .select(`
@@ -86,198 +77,153 @@ export default function MainFeed({ onPostsReady }) {
                         likes:feed_likes(user_id),
                         comments:feed_comments(count)
                     `)
-                    .eq('author.institution', targetInstitution)
+                    .eq('author.institution', currentInstitution)
                     .order('created_at', { ascending: false })
-                    .limit(100);
+                    .limit(30);
 
                 if (error) throw error;
-
-                if (feedsData) {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    const processed = feedsData.map(post => ({
-                        ...post,
-                        likes_count: post.likes?.length || 0,
-                        comments_count: post.comments?.[0]?.count || 0,
-                        is_liked: post.likes?.some(l => l.user_id === (profile?.id || session?.user?.id))
-                    }));
-
-                    processed.sort((a, b) => (b.likes_count + b.comments_count) - (a.likes_count + a.comments_count));
-                    const percentToTake = 0.4;
-                    const countToTake = Math.max(Math.ceil(processed.length * percentToTake), Math.min(processed.length, 5));
-
-                    finalPosts = processed.slice(0, countToTake);
-                    moreAvailable = false;
-                }
-
-            } else {
-                const from = pageNumber * limit;
-                const to = from + limit - 1;
-
-                const { data: feedsData, error } = await supabase
-                    .from("feeds")
-                    .select(`
-                        *,
-                        author:users!inner (
-                            display_name,
-                            username,
-                            profile_picture,
-                            is_verified,
-                            is_admin,
-                            institution
-                        ),
-                        likes:feed_likes(user_id),
-                        comments:feed_comments(count)
-                    `)
-                    .eq('author.institution', targetInstitution)
-                    .order('created_at', { ascending: false })
-                    .range(from, to);
-
-                if (error) throw error;
-
-                if (feedsData) {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    finalPosts = feedsData.map(post => ({
-                        ...post,
-                        likes_count: post.likes?.length || 0,
-                        comments_count: post.comments?.[0]?.count || 0,
-                        is_liked: post.likes?.some(l => l.user_id === (profile?.id || session?.user?.id))
-                    }));
-
-                    moreAvailable = feedsData.length === limit;
-                }
-            }
-
-            if (isInitial) {
-                setPosts(finalPosts);
-            } else {
-                setPosts(prev => {
-                    const existingIds = new Set(prev.map(p => p.id));
-                    const newPosts = finalPosts.filter(p => !existingIds.has(p.id));
-                    return [...prev, ...newPosts];
-                });
-            }
-            setHasMore(moreAvailable);
-
-        } catch (error) {
-            console.error("Error fetching feeds:", error);
-            showToast("Failed to load feeds.", "error");
-        } finally {
-            setLoading(false);
-            loadingMoreRef.current = false;
-            setLoadingMore(false);
-        }
-    };
-
-    // Consolidated effect for initialization and tab changes
-    useEffect(() => {
-        let isMounted = true;
-        
-        const initAndFetch = async () => {
-            let currentInstitution = profile?.institution;
-            
-            // If no profile, fetch it first
-            if (!profile) {
                 const { data: { session } } = await supabase.auth.getSession();
-                if (session && isMounted) {
-                    const { data: profileData } = await supabase
-                        .from("users")
-                        .select("id, institution, profile_picture, display_name, first_name")
-                        .eq("id", session.user.id)
-                        .single();
-                    
-                    if (profileData && isMounted) {
-                        setProfileWithRef(profileData);
-                        currentInstitution = profileData.institution;
-                    }
-                }
+                const processed = (feedsData || []).map(post => ({
+                    ...post,
+                    likes_count: post.likes?.length || 0,
+                    comments_count: post.comments?.[0]?.count || 0,
+                    is_liked: post.likes?.some(l => l.user_id === (session?.user?.id))
+                })).sort((a, b) => (b.likes_count + b.comments_count) - (a.likes_count + a.comments_count));
+                
+                return processed.slice(0, 15);
             }
 
-            // Only fetch if we have an institution AND we don't already have posts
-            // (unless we are switching tabs, in which case fetchPosts handles the reset)
-            if (currentInstitution && isMounted) {
-                if (posts.length === 0) {
-                    setPage(0);
-                    await fetchPosts(0, true, activeTab, currentInstitution);
-                } else {
-                    setLoading(false);
-                }
-            } else if (isMounted) {
-                setLoading(false);
-            }
-        };
+            const from = pageParam * limit;
+            const to = from + limit - 1;
 
-        initAndFetch();
+            const { data: feedsData, error } = await supabase
+                .from("feeds")
+                .select(`
+                    *,
+                    author:users!inner (
+                        display_name,
+                        username,
+                        profile_picture,
+                        is_verified,
+                        is_admin,
+                        institution
+                    ),
+                    likes:feed_likes(user_id),
+                    comments:feed_comments(count)
+                `)
+                .eq('author.institution', currentInstitution)
+                .order('created_at', { ascending: false })
+                .range(from, to);
 
-        return () => { isMounted = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab]);
+            if (error) throw error;
+            const { data: { session } } = await supabase.auth.getSession();
+            return (feedsData || []).map(post => ({
+                ...post,
+                likes_count: post.likes?.length || 0,
+                comments_count: post.comments?.[0]?.count || 0,
+                is_liked: post.likes?.some(l => l.user_id === (session?.user?.id))
+            }));
+        },
+        getNextPageParam: (lastPage, allPages) => {
+            return lastPage.length === limit ? allPages.length : undefined;
+        },
+        staleTime: 1000 * 60 * 5,
+        enabled: !!profile?.institution,
+    });
 
-    // Handle Tab Changes - Reset posts and page in context
+    const allPosts = useMemo(() => data?.pages.flat() || [], [data]);
+
+    React.useImperativeHandle(ref, () => ({
+        refresh: async () => {
+            await refetch();
+            virtuosoRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }));
+
     const handleTabChange = (tab) => {
         if (tab !== activeTab) {
-            setPosts([]);
-            setPage(0);
-            setHasMore(true);
-            setScrollPosition(0);
             setActiveTab(tab);
+            virtuosoRef.current?.scrollTo({ top: 0, behavior: 'auto' });
         }
     };
 
-    const observerTarget = useRef(null);
-
-    const restoredRef = useRef(false);
-
-    // Call onPostsReady once after posts are rendered so parent can restore scroll
-    useEffect(() => {
-        if (!loading && posts.length > 0 && !restoredRef.current) {
-            restoredRef.current = true;
-            onPostsReady?.();
+    const handleEndReached = () => {
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
         }
-    }, [loading, posts.length]);
+    };
 
-    // Keep refs in sync so the observer always has fresh values
-    useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
-    useEffect(() => { pageRef.current = page; }, [page]);
+    const handleLike = async (post) => {
+        const isLiked = post.is_liked;
+        const postId = post.id;
+        const currentUserId = (await supabase.auth.getSession()).data.session?.user?.id;
 
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            entries => {
-                if (
-                    entries[0].isIntersecting &&
-                    hasMoreRef.current &&
-                    !loading &&
-                    !loadingMoreRef.current &&
-                    activeTab === 'all'
-                ) {
-                    const nextPage = pageRef.current + 1;
-                    pageRef.current = nextPage;
-                    setPage(nextPage);
-                    fetchPosts(nextPage, false, activeTab);
+        queryClient.setQueryData(['FEED_STREAM', activeTab, profile?.institution], (oldData) => {
+            if (!oldData) return oldData;
+            return {
+                ...oldData,
+                pages: oldData.pages.map(page => 
+                    page.map(p => p.id === postId ? {
+                        ...p,
+                        is_liked: !isLiked,
+                        likes_count: isLiked ? p.likes_count - 1 : p.likes_count + 1
+                    } : p)
+                )
+            };
+        });
+
+        if (isLiked) {
+            await supabase.from('feed_likes').delete().eq('feed_id', postId).eq('user_id', currentUserId);
+        } else {
+            await supabase.from('feed_likes').insert([{ feed_id: postId, user_id: currentUserId }]);
+            if (post.user_id !== currentUserId) {
+                const { data: existingNotif } = await supabase
+                    .from('notifications')
+                    .select('id, actor_id')
+                    .eq('user_id', post.user_id)
+                    .eq('type', 'like')
+                    .eq('entity_id', postId)
+                    .eq('is_read', false)
+                    .single();
+
+                if (existingNotif) {
+                    const othersCount = (post.likes_count || 0);
+                    const actorName = profile?.display_name || profile?.first_name || 'User';
+                    const message = othersCount > 0
+                        ? `${actorName} and ${othersCount} others liked your post`
+                        : `liked your post`;
+
+                    await supabase
+                        .from('notifications')
+                        .update({
+                            actor_id: currentUserId,
+                            message: message,
+                            created_at: new Date().toISOString()
+                        })
+                        .eq('id', existingNotif.id);
+                } else {
+                    const actorName = profile?.display_name || profile?.first_name || 'User';
+                    await supabase.from('notifications').insert({
+                        user_id: post.user_id,
+                        actor_id: currentUserId,
+                        type: 'like',
+                        entity_type: 'feed',
+                        entity_id: postId,
+                        message: `liked your post`
+                    });
+
+                    fetch('/api/notifications/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userIds: [post.user_id],
+                            title: actorName,
+                            message: "liked your post",
+                            url: `${window.location.origin}/dashboard`
+                        })
+                    }).catch(err => console.error("Push notification failed:", err));
                 }
-            },
-            { threshold: 0.1 }
-        );
-
-        if (observerTarget.current) observer.observe(observerTarget.current);
-        return () => { if (observerTarget.current) observer.unobserve(observerTarget.current); };
-    // Only re-create observer when loading/activeTab change, refs handle the rest
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [loading, activeTab]);
-
-    const handleMediaSelect = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const fileSizeMB = file.size / (1024 * 1024);
-            if (fileSizeMB > 30) {
-                showToast("File size must be less than 30MB.", "error");
-                e.target.value = "";
-                return;
             }
-
-            const isVideo = file.type.startsWith("video/");
-            setMediaType(isVideo ? "video" : "image");
-            setSelectedMedia(file);
-            setMediaPreview(URL.createObjectURL(file));
         }
     };
 
@@ -287,211 +233,112 @@ export default function MainFeed({ onPostsReady }) {
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error("Not authenticated");
-
             let url = null;
-
             if (selectedMedia) {
-                const fileExt = selectedMedia.name.split('.').pop();
-                const fileName = `${session.user.id}-${Math.random()}.${fileExt}`;
-                const filePath = `post-media/${fileName}`;
+                // Compress image before upload (videos pass through unchanged)
+                const fileToUpload = await compressForFeed(selectedMedia);
+                const fileExt = fileToUpload.name.split('.').pop();
+                const fileName = `post-media/${session.user.id}-${Date.now()}.${fileExt}`;
 
-                const { error: uploadError } = await supabase.storage
-                    .from('feeds')
-                    .upload(filePath, selectedMedia);
+                // 1. Get presigned URL from our API
+                const uploadRes = await fetch("/api/upload", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        fileName: fileName,
+                        fileType: fileToUpload.type,
+                    }),
+                });
 
-                if (uploadError) throw uploadError;
+                if (!uploadRes.ok) throw new Error("Failed to get upload URL");
+                const { uploadUrl, publicUrl } = await uploadRes.json();
 
-                const { data: urlData } = supabase.storage
-                    .from('feeds')
-                    .getPublicUrl(filePath);
+                // 2. Upload directly to Cloudflare R2
+                const r2Res = await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": fileToUpload.type },
+                    body: fileToUpload,
+                });
 
-                url = urlData.publicUrl;
+                if (!r2Res.ok) throw new Error("Failed to upload media");
+                url = publicUrl;
             }
 
-            const { data: newPost, error: postError } = await supabase
+            const { data: newPost, error } = await supabase
                 .from('feeds')
-                .insert([{
-                    user_id: session.user.id,
-                    content: postContent,
-                    media_url: url
-                }])
-                .select(`
-                    *,
-                    author:users!inner (
-                        display_name,
-                        first_name,
-                        username,
-                        profile_picture,
-                        is_verified,
-                        is_admin,
-                        institution
-                    )
-                `)
+                .insert([{ user_id: session.user.id, content: postContent, media_url: url }])
+                .select("*, author:users!inner(*)")
                 .single();
 
-            if (postError) throw postError;
+            if (error) throw error;
 
-            if (activeTab === 'all') {
-                setPosts([{ ...newPost, likes_count: 0, comments_count: 0, is_liked: false }, ...posts]);
-            } else {
-                showToast("Post created successfully!");
-            }
+            const freshPost = { ...newPost, likes_count: 0, comments_count: 0, is_liked: false };
+            queryClient.setQueryData(['FEED_STREAM', 'all', profile?.institution], (oldData) => {
+                if (!oldData) return { pages: [[freshPost]], pageParams: [0] };
+                return {
+                    ...oldData,
+                    pages: [[freshPost, ...oldData.pages[0]], ...oldData.pages.slice(1)]
+                };
+            });
 
             setPostContent("");
             setSelectedMedia(null);
             setMediaPreview(null);
-
+            showToast("Successfully buzzed!", "success");
         } catch (error) {
-            console.error("Error creating post:", error);
-            showToast("Failed to create post. Please try again.", "error");
+            showToast("Failed to create post.", "error");
         } finally {
             setIsPosting(false);
         }
     };
 
-    const handleDeletePost = async (postId, mediaUrl) => {
+    const handleDeletePost = async (postId) => {
         const confirmed = await confirmAction({
             title: "Delete Post?",
-            message: "This post will be permanently removed from the hive. Are you sure?",
+            message: "Permanently remove this buzzing?",
             confirmText: "Delete",
-            cancelText: "Keep Post",
             type: "danger"
         });
-
         if (!confirmed) return;
-
         try {
-            if (mediaUrl) {
-                try {
-                    const bucketName = 'feeds';
-                    const urlObj = new URL(mediaUrl);
-                    const filenameFromUrl = decodeURIComponent(urlObj.pathname).split('/').pop().split('?')[0];
-                    const folderPath = mediaUrl.includes('post-images') ? 'post-images' : 'post-media';
-
-                    const { data: files } = await supabase.storage.from(bucketName).list(folderPath);
-                    const matchingFile = files?.find(f => f.name === filenameFromUrl);
-
-                    if (matchingFile) {
-                        const filePath = `${folderPath}/${matchingFile.name}`;
-                        await supabase.storage.from(bucketName).remove([filePath]);
-                    }
-                } catch (e) {
-                    console.error("Cleanup failed:", e);
-                }
-            }
-
-            const { error: postError } = await supabase
-                .from('feeds')
-                .delete()
-                .eq('id', postId);
-
-            if (postError) throw postError;
-
-            setPosts(posts.filter(p => p.id !== postId));
-            showToast("Post deleted successfully!");
-
+            queryClient.setQueryData(['FEED_STREAM', activeTab, profile?.institution], (oldData) => {
+                if (!oldData) return oldData;
+                return {
+                    ...oldData,
+                    pages: oldData.pages.map(page => page.filter(p => p.id !== postId))
+                };
+            });
+            await supabase.from('feeds').delete().eq('id', postId);
+            showToast("Post deleted.");
         } catch (error) {
-            console.error("Error deleting post:", error);
-            showToast("Failed to delete post. Please try again.", "error");
+            showToast("Failed to delete.", "error");
+            refetch();
         }
     };
 
-    const handleReportPost = async (post) => {
-        openReportModal({
-            item_id: post.id,
-            item_type: 'feed'
-        });
-    };
+    const handleReportPost = (post) => openReportModal({ item_id: post.id, item_type: 'feed' });
 
-    const handleLike = async (post) => {
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
-
-            const isLiked = post.is_liked;
-            const postId = post.id;
-
-            setPosts(prev => prev.map(p =>
-                p.id === postId
-                    ? { ...p, is_liked: !isLiked, likes_count: isLiked ? p.likes_count - 1 : p.likes_count + 1 }
-                    : p
-            ));
-
-            if (isLiked) {
-                await supabase.from('feed_likes').delete().eq('feed_id', postId).eq('user_id', session.user.id);
-            } else {
-                await supabase.from('feed_likes').insert([{ feed_id: postId, user_id: session.user.id }]);
-
-                if (post.user_id !== session.user.id) {
-                    const { data: existingNotif } = await supabase
-                        .from('notifications')
-                        .select('id, actor_id')
-                        .eq('user_id', post.user_id)
-                        .eq('type', 'like')
-                        .eq('entity_id', postId)
-                        .eq('is_read', false)
-                        .single();
-
-                    if (existingNotif) {
-                        const othersCount = (post.likes_count || 0);
-                        const actorName = profile?.display_name || profile?.first_name || 'User';
-                        const message = othersCount > 0
-                            ? `${actorName} and ${othersCount} others liked your post`
-                            : `liked your post`;
-
-                        await supabase
-                            .from('notifications')
-                            .update({
-                                actor_id: session.user.id,
-                                message: message,
-                                created_at: new Date().toISOString()
-                            })
-                            .eq('id', existingNotif.id);
-                    } else {
-                        const actorName = profile?.display_name || profile?.first_name || 'User';
-                        await supabase.from('notifications').insert({
-                            user_id: post.user_id,
-                            actor_id: session.user.id,
-                            type: 'like',
-                            entity_type: 'feed',
-                            entity_id: postId,
-                            message: `liked your post`
-                        });
-
-                        fetch('/api/notifications/send', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                userIds: [post.user_id],
-                                title: actorName,
-                                message: "liked your post",
-                                url: `${window.location.origin}/dashboard`
-                            })
-                        }).catch(err => console.error("Push notification failed:", err));
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Error toggling like:", error);
-            setPosts(prev => prev.map(p =>
-                p.id === post.id
-                    ? { ...p, is_liked: post.is_liked, likes_count: post.likes_count }
-                    : p
-            ));
+    const handleMediaSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setMediaType(file.type.startsWith("video/") ? "video" : "image");
+            setSelectedMedia(file);
+            setMediaPreview(URL.createObjectURL(file));
         }
     };
 
-    return (
-        <div className="flex flex-col gap-4 w-full">
-            {/* Header */}
+    const Header = () => (
+        <div className="flex flex-col gap-4 w-full bg-[#fcf6de] pb-4">
+            <div className="mb-4">
+                <WelcomeBanner firstName={profile?.first_name} email={profile?.email} />
+            </div>
+
             <div className="flex items-center justify-between mt-4 mb-0">
                 <h2 className="text-2xl sm:text-3xl font-black tracking-wide font-newyork text-gray-900 leading-none">
                     Campus Feed
                 </h2>
             </div>
 
-            {/* Tabs */}
             <div className="border-b border-gray-200 flex items-center mb-2">
                 {['all', 'trending'].map((tab) => (
                     <button
@@ -507,7 +354,6 @@ export default function MainFeed({ onPostsReady }) {
                 ))}
             </div>
 
-            {/* Create Post Input */}
             <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 flex flex-col mb-2">
                 <div className="flex gap-3 sm:gap-4">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-50 shrink-0 block rounded-full">
@@ -563,55 +409,75 @@ export default function MainFeed({ onPostsReady }) {
                     </button>
                 </div>
             </div>
-
-            {/* Feed Stream */}
-            <div className="flex flex-col gap-3 pb-8">
-                {loading ? (
-                    <div className="flex flex-col gap-4">
-                        {[...Array(5)].map((_, i) => (
-                            <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-                                <FeedPostSkeleton />
-                            </div>
-                        ))}
-                    </div>
-                ) : posts.length > 0 ? (
-                    posts.map(post => (
-                        <FeedPostCard
-                            key={post.id}
-                            post={post}
-                            profile={profile}
-                            supabase={supabase}
-                            onDelete={handleDeletePost}
-                            onReport={handleReportPost}
-                            onLike={handleLike}
-                        />
-                    ))
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-center opacity-30 px-6">
-                        <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center mb-6 shadow-sm">
-                            <HugeiconsIcon icon={Image01Icon} className="w-8 h-8 text-gray-400" />
+            
+            {isLoading && allPosts.length === 0 && (
+                <div className="flex flex-col gap-4 mt-4">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                            <FeedPostSkeleton />
                         </div>
-                        <h3 className="text-xl font-black font-newyork text-gray-900">The hive is quiet</h3>
-                        <p className="text-gray-500 font-bold mt-1 max-w-[200px]">
-                            {activeTab === 'all' ? "Start the conversation by posting what's happening!" : "No trending posts yet."}
-                        </p>
-                    </div>
-                )}
-
-                {loadingMore && (
-                    <div className="flex justify-center py-4">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ffc107]"></div>
-                    </div>
-                )}
-
-                <div ref={observerTarget} className="h-4 w-full" />
-
-                {!hasMore && posts.length > 0 && (
-                    <div className="text-center py-8 text-gray-400 font-bold text-sm">
-                        {activeTab === 'all' ? "You've reached the end of the hive." : "That's all the top trending posts right now."}
-                    </div>
-                )}
-            </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
-}
+
+    const Footer = () => (
+        <div className="flex flex-col gap-3 py-6">
+            {isFetchingNextPage && (
+                <div className="flex justify-center py-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ffc107]"></div>
+                </div>
+            )}
+
+            {!hasNextPage && allPosts.length > 0 && (
+                <div className="text-center py-8 text-gray-400 font-bold text-sm">
+                    {activeTab === 'all' ? "You've reached the end of the hive." : "That's all the top trending posts right now."}
+                </div>
+            )}
+            
+            {allPosts.length === 0 && !isLoading && (
+                <div className="flex flex-col items-center justify-center py-20 text-center opacity-30 px-6">
+                    <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center mb-6 shadow-sm">
+                        <HugeiconsIcon icon={Image01Icon} className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-black font-newyork text-gray-900">The hive is quiet</h3>
+                    <p className="text-gray-500 font-bold mt-1 max-w-[200px]">
+                        {activeTab === 'all' ? "Start the conversation by posting what's happening!" : "No trending posts yet."}
+                    </p>
+                </div>
+            )}
+            <div className="h-20 w-full" />
+        </div>
+    );
+
+    return (
+        <div className="flex flex-col w-full flex-1 min-h-0 h-full">
+            <Virtuoso
+                ref={virtuosoRef}
+                scrollerRef={(el) => { if (el) el.id = 'dashboard-scroll-container'; }}
+                data={allPosts}
+                overscan={400}
+                increaseViewportBy={{ top: 300, bottom: 300 }}
+                atBottomThreshold={600}
+                endReached={handleEndReached}
+                className="scrollbar-hide overscroll-contain"
+                components={{ Header, Footer }}
+                itemContent={(idx, post) => (
+                    <div className="pb-3 px-0.5">
+                        <FeedPostCard 
+                            post={post} 
+                            profile={profile} 
+                            onDelete={handleDeletePost} 
+                            onReport={handleReportPost} 
+                            onLike={handleLike} 
+                        />
+                    </div>
+                )}
+            />
+        </div>
+    );
+});
+
+MainFeed.displayName = "MainFeed";
+export default MainFeed;

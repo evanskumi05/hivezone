@@ -127,7 +127,7 @@ export default function GigsPage() {
     }, [supabase, activeCategory, sortOrder]);
 
     return (
-        <div className="flex flex-col h-full bg-[#fcf6de] p-4 sm:p-8 pt-0 gap-6 max-w-[1200px] mx-auto w-full">
+        <div className="flex flex-col min-h-full bg-[#fcf6de] p-4 sm:p-8 pt-0 gap-6 max-w-[1200px] mx-auto w-full">
 
             {/* Header Area */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-4">
@@ -309,7 +309,7 @@ export default function GigsPage() {
                     <p className="text-gray-500 font-bold mt-2 text-sm max-w-sm">No ones offering any gigs matching your filters. Try adjusting your category or post the first one!</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4 pb-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                     {gigs.map((gig) => (
                         <div
                             key={gig.id}
@@ -439,6 +439,8 @@ export default function GigsPage() {
                 </div>
             )}
 
+            {/* Spacer to clear Bottom Nav */}
+            <div className="h-32 w-full shrink-0"></div>
         </div>
     );
 }

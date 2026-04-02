@@ -27,6 +27,7 @@ import Avatar from "@/components/ui/Avatar";
 import { getDisplayName } from "@/utils/stringUtils";
 import Linkify from "@/components/ui/Linkify";
 import UserBadge from "@/components/ui/UserBadge";
+import { compressForChat } from "@/utils/compressImage";
 
 const downloadFile = async (url, fallbackName = 'attachment') => {
     try {
@@ -313,7 +314,9 @@ export default function ChatWindowPage() {
 
         if (msgAttachmentFiles.length > 0) {
             const uploadPromises = msgAttachmentFiles.map(async (file, index) => {
-                const fileExt = file.name.split('.').pop();
+                // Compress images before upload (PDFs, docs, etc. pass through)
+                const fileToUpload = await compressForChat(file);
+                const fileExt = fileToUpload.name.split('.').pop();
                 const fileName = `chat-attachments/${currentUser.id}-${Date.now()}-${index}.${fileExt}`;
 
                 // 1. Get presigned URL from our API
@@ -332,8 +335,8 @@ export default function ChatWindowPage() {
                 // 2. Upload directly to Cloudflare R2
                 const uploadResponse = await fetch(uploadUrl, {
                     method: "PUT",
-                    headers: { "Content-Type": file.type },
-                    body: file,
+                    headers: { "Content-Type": fileToUpload.type },
+                    body: fileToUpload,
                 });
 
                 if (!uploadResponse.ok) throw new Error("Failed to upload");

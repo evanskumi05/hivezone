@@ -17,6 +17,7 @@ import Avatar from "@/components/ui/Avatar";
 import { getDisplayName } from "@/utils/stringUtils";
 import FeedPostCard from "@/components/FeedPostCard";
 import UserBadge from "@/components/ui/UserBadge";
+import PullToRefresh from "@/components/ui/PullToRefresh";
 
 export default function ProfilePage() {
     const { showToast, openReportModal, showImage } = useUI();
@@ -44,34 +45,34 @@ export default function ProfilePage() {
 
     const supabase = createClient();
 
+    const fetchUser = async (isPTR = false) => {
+        if (!isPTR) setLoading(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            router.push("/auth/signin");
+            return;
+        }
+
+        const { data: profileData } = await supabase
+            .from("users")
+            .select("id, username, display_name, profile_picture, cover_photo, bio, skills, portfolio_links, institution, programme, year_of_study, is_verified, is_admin")
+            .eq("id", session.user.id)
+            .single();
+
+        if (profileData) {
+            setProfile(profileData);
+            await fetchUserContent(session.user.id, isPTR);
+        }
+
+        setLoading(false);
+    };
+
     useEffect(() => {
-        const fetchUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                router.push("/auth/signin");
-                return;
-            }
-
-            // Fetch profile data from public.users table
-            const { data: profileData } = await supabase
-                .from("users")
-                .select("id, username, display_name, profile_picture, cover_photo, bio, skills, portfolio_links, institution, programme, year_of_study, is_verified, is_admin")
-                .eq("id", session.user.id)
-                .single();
-
-            if (profileData) {
-                setProfile(profileData);
-                fetchUserContent(session.user.id);
-            }
-
-            setLoading(false);
-        };
-
         fetchUser();
     }, [router, supabase]);
 
-    const fetchUserContent = async (userId) => {
-        setLoadingContent(true);
+    const fetchUserContent = async (userId, isPTR = false) => {
+        if (!isPTR) setLoadingContent(true);
         try {
             // Fetch user's posts
             const { data: postsData } = await supabase
@@ -322,10 +323,11 @@ export default function ProfilePage() {
     const portfolioUrl = getValidUrl(singlePortfolioLink);
 
     return (
-        <div className="flex flex-col h-full bg-white md:bg-[#fcf6de] md:p-4 lg:p-8 md:pt-0 max-w-[950px] mx-auto w-full">
+        <PullToRefresh onRefresh={() => fetchUser(true)} className="flex-1">
+            <div id="dashboard-scroll-container" className="flex flex-col h-full bg-white md:bg-[#fcf6de] md:p-4 lg:p-8 md:pt-0 max-w-[950px] mx-auto w-full overflow-y-auto">
 
-            {/* Main Content Layout */}
-            <div className="flex-1 overflow-y-auto scrollbar-hide pb-20 md:pb-10 w-full">
+                {/* Main Content Layout */}
+                <div className="flex-1 overflow-y-auto scrollbar-hide pb-20 md:pb-10 w-full">
                 <div className="bg-white md:bg-[#f4f4f4] md:rounded-[2.5rem] w-full min-h-[85vh] flex flex-col overflow-hidden relative md:border md:border-gray-200 md:shadow-sm">
 
                     {/* Cover Photo Area */}
@@ -622,6 +624,7 @@ export default function ProfilePage() {
                     </div>
                 </div>
             )}
-        </div>
+            </div>
+        </PullToRefresh>
     );
 }

@@ -158,14 +158,23 @@ const Navbar = () => {
     // Custom Logo click behavior (scroll to top if scrolled down, else go to dashboard)
     const handleLogoClick = (e) => {
         e.preventDefault();
-        // Check scroll position
+        
+        // Check standard window scroll first
         if (window.scrollY > 0) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-            // Already at the top, so act as a link
-            if (pathname !== '/dashboard') {
-                router.push('/dashboard');
-            }
+            return;
+        }
+
+        // Check for our custom scroll containers used in Dashboard/Search/Profile
+        const customScrollContainer = document.getElementById('dashboard-scroll-container');
+        if (customScrollContainer && customScrollContainer.scrollTop > 0) {
+            customScrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        // Already at the top, so act as a link
+        if (pathname !== '/dashboard') {
+            router.push('/dashboard');
         }
     };
 
@@ -411,9 +420,6 @@ const Navbar = () => {
                                 </>
                             )}
 
-                            <Link href="/dashboard/gigs" onClick={() => setIsMobileSidebarOpen(false)} className="px-4 py-3.5 rounded-2xl hover:bg-gray-50 flex items-center gap-4">
-                                <span className="font-bold text-gray-900 text-[16px]">Campus Gigs</span>
-                            </Link>
                             <Link href="/dashboard/study-circles" onClick={() => setIsMobileSidebarOpen(false)} className="px-4 py-3.5 rounded-2xl hover:bg-gray-50 flex items-center gap-4">
                                 <span className="font-bold text-gray-900 text-[16px]">Study Circles</span>
                             </Link>

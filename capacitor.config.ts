@@ -1,13 +1,15 @@
 import { CapacitorConfig } from '@capacitor/cli';
+import { KeyboardResize } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'co.hivezone.app',
   appName: 'HiveZone',
   webDir: 'out',
   server: {
-
+    // Use the live URL for production access!
     url: 'https://hivezone.co',
     cleartext: true
+
   },
   plugins: {
     SplashScreen: {
@@ -21,12 +23,13 @@ const config: CapacitorConfig = {
       splashImmersive: true,
     },
     StatusBar: {
-      style: "DARK",
+      style: "LIGHT",
       backgroundColor: "#fcf6de",
-      overlaysWebView: false
+      overlaysWebView: true
+    },
+    Keyboard: {
+      resize: KeyboardResize.None
     }
-
-
   },
   appendUserAgent: "CapacitorApp"
 };

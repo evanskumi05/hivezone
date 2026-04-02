@@ -11,8 +11,9 @@ export const CapacitorInit = () => {
                     // DO NOT overlay webview, allow the status bar to push content down
                     await StatusBar.setOverlaysWebView({ overlay: false });
                     
-                    // Set light background style (dark icons)
-                    await StatusBar.setStyle({ style: 'DARK' });
+                    // Set light background style (forces dark icons like battery/wifi)
+                    await StatusBar.setStyle({ style: 'LIGHT' });
+
                     
                     // Set background color to dashboard cream
                     await StatusBar.setBackgroundColor({ color: '#fcf6de' });

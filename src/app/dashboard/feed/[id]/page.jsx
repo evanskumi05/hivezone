@@ -24,6 +24,7 @@ import AutoPauseVideo from "@/components/ui/AutoPauseVideo";
 import Linkify from "@/components/ui/Linkify";
 import { FeedPostSkeleton } from "@/components/ui/Skeleton";
 import UserBadge from "@/components/ui/UserBadge";
+import { feedImageUrl, fullImageUrl } from "@/utils/optimizeImage";
 
 const Comment = ({ comment, allComments, depth = 0, setReplyingTo, setReplyContext, replyInputRef, formatDate, profile, handleDeleteComment }) => {
     const childComments = allComments.filter(c => c.parent_id === comment.id);
@@ -616,7 +617,7 @@ export default function FeedDetailPage() {
                             {post.media_url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
                                 <AutoPauseVideo src={post.media_url} className="w-full max-h-[600px] object-contain transition-transform duration-700 group-hover/media:scale-[1.01]" onClick={() => showImage(post.media_url)} />
                             ) : (
-                                <img src={post.media_url} alt="Media" className="w-full h-full max-h-[700px] object-cover transition-transform duration-700 group-hover/media:scale-[1.01]" onClick={() => showImage(post.media_url)} />
+                                <img src={feedImageUrl(post.media_url)} alt="Media" loading="lazy" decoding="async" className="w-full h-full max-h-[700px] object-cover transition-transform duration-700 group-hover/media:scale-[1.01]" onClick={() => showImage(fullImageUrl(post.media_url))} />
                             )}
                         </div>
                     )}

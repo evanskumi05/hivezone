@@ -12,6 +12,10 @@ const nextConfig = {
       },
     ],
   },
+  // Allow Capacitor (running on local IP) to connect to Next.js HMR for live reload
+  allowedDevOrigins: ["10.217.45.102", "localhost", "10.0.2.2"],
 };
+
+
 
 export default nextConfig;

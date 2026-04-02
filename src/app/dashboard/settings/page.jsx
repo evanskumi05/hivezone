@@ -1,20 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertIcon, ArrowLeft01Icon, Camera01Icon, Notification01Icon } from "@hugeicons/core-free-icons";
+import { AlertIcon, ArrowLeft01Icon, Camera01Icon } from "@hugeicons/core-free-icons";
 import { PageSkeleton } from "@/components/ui/Skeleton";
-import { useRef } from "react";
-import { getNotificationPermissionStatus, requestNotificationPermission, loginOneSignal } from "@/utils/OneSignalNative";
+import { compressForAvatar } from "@/utils/compressImage";
 
 // Menu items based on the user's design image
 const menuItems = [
     { id: "profile", label: "Edit Profile" },
     { id: "password", label: "Change Password" },
-    { id: "notifications", label: "Notifications" },
     { id: "delete", label: "Delete Account", isDestructive: true }
 ];
 
@@ -34,9 +32,6 @@ export default function SettingsPage() {
     const [passwordData, setPasswordData] = useState({ current: "", new: "", confirm: "" });
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef(null);
-    const [bioVisibility, setBioVisibility] = useState("everybody"); // everybody, contacts, nobody
-    const [notificationPermission, setNotificationPermission] = useState("default"); // granted, denied, default
-    const [checkingNotifications, setCheckingNotifications] = useState(false);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -65,52 +60,10 @@ export default function SettingsPage() {
             }
 
             setLoading(false);
-            
-            // Sync with OneSignal for better tracking
-            if (session.user.id) {
-                loginOneSignal(session.user.id);
-            }
         };
 
         fetchUser();
     }, [router, supabase]);
-
-    // Check notification status when switching to the tab
-    useEffect(() => {
-        if (activeTab === "notifications") {
-            const checkPermission = async () => {
-                setCheckingNotifications(true);
-                try {
-                    const status = await getNotificationPermissionStatus();
-                    setNotificationPermission(status || "default");
-                } catch (e) {
-                    console.error("Error checking notification status:", e);
-                } finally {
-                    setCheckingNotifications(false);
-                }
-            };
-            checkPermission();
-        }
-    }, [activeTab]);
-
-    const handleEnableNotifications = async () => {
-        setCheckingNotifications(true);
-        try {
-            const result = await requestNotificationPermission();
-            // result might be boolean (native) or string (web)
-            const status = await getNotificationPermissionStatus();
-            setNotificationPermission(status);
-            
-            if (status === 'granted') {
-                showToast("Notifications enabled!");
-            }
-        } catch (error) {
-            console.error("Error enabling notifications:", error);
-            showToast("Failed to enable notifications.", "error");
-        } finally {
-            setCheckingNotifications(false);
-        }
-    };
 
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
@@ -129,7 +82,9 @@ export default function SettingsPage() {
 
         setUploading(true);
         try {
-            const fileExt = file.name.split('.').pop();
+            // Compress image before upload (400px max for avatars)
+            const compressedFile = await compressForAvatar(file);
+            const fileExt = compressedFile.name.split('.').pop();
             const fileName = `avatars/${userId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
             // 1. Get presigned URL from our API
@@ -138,7 +93,7 @@ export default function SettingsPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     fileName: fileName,
-                    fileType: file.type,
+                    fileType: compressedFile.type,
                 }),
             });
 
@@ -148,8 +103,8 @@ export default function SettingsPage() {
             // 2. Upload directly to Cloudflare R2
             const uploadResponse = await fetch(uploadUrl, {
                 method: "PUT",
-                headers: { "Content-Type": file.type },
-                body: file,
+                headers: { "Content-Type": compressedFile.type },
+                body: compressedFile,
             });
 
             if (!uploadResponse.ok) throw new Error("Failed to upload");
@@ -416,70 +371,6 @@ export default function SettingsPage() {
                         </div>
                     )}
 
-                    {/* Views for notifications and privacy are removed for now */}
-
-                    {/* View: Notifications */}
-                    {activeTab === "notifications" && (
-                        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm flex flex-col items-center justify-center min-h-[300px] text-center">
-                            <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
-                                <HugeiconsIcon icon={Notification01Icon} className="w-8 h-8 text-[#ffc107]" />
-                            </div>
-                            <h3 className="text-xl font-black text-gray-900 mb-2 font-newyork">Campus Notifications</h3>
-                            <p className="text-gray-500 font-medium text-sm max-w-xs mb-8">
-                                Stay updated on local campus gigs, study circle messages, and important alerts in your zone.
-                            </p>
-
-                            <div className="flex flex-col items-center gap-6 w-full max-w-sm">
-                                {/* Toggle Control */}
-                                <div className="w-full bg-gray-50 border border-gray-100 rounded-3xl p-5 flex items-center justify-between shadow-sm group hover:border-[#ffc107]/30 transition-all duration-300">
-                                    <div className="flex flex-col items-start gap-0.5">
-                                        <span className="text-[15px] font-black text-gray-900 tracking-tight">Push Notifications</span>
-                                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
-                                            {notificationPermission === 'granted' ? 'Enabled' : 'Disabled'}
-                                        </span>
-                                    </div>
-                                    
-                                    <button
-                                        onClick={handleEnableNotifications}
-                                        disabled={checkingNotifications || notificationPermission === 'denied'}
-                                        className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-500 outline-none
-                                            ${notificationPermission === 'granted' ? 'bg-[#ffc107] shadow-lg shadow-yellow-100' : 'bg-gray-200'}
-                                            ${checkingNotifications ? 'opacity-50 cursor-wait' : 'cursor-pointer hover:scale-105 active:scale-95'}
-                                            ${notificationPermission === 'denied' ? 'opacity-30 grayscale cursor-not-allowed' : ''}
-                                        `}
-                                    >
-                                        <span className="sr-only">Toggle Push Notifications</span>
-                                        <span
-                                            className={`${
-                                                notificationPermission === 'granted' ? 'translate-x-7 bg-white shadow-sm' : 'translate-x-1.5 bg-gray-400'
-                                            } inline-block h-5 w-5 transform rounded-full transition-all duration-500 ease-in-out`}
-                                        />
-                                    </button>
-                                </div>
-
-                                {/* Status Messages */}
-                                {notificationPermission === 'denied' && (
-                                    <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 text-left">
-                                        <HugeiconsIcon icon={AlertIcon} size={18} className="text-red-500 shrink-0 mt-0.5" />
-                                        <div className="flex flex-col gap-1">
-                                            <p className="text-[13px] font-black text-red-900 leading-tight">Access Denied</p>
-                                            <p className="text-[12px] font-medium text-red-600 leading-relaxed">
-                                                To enable notifications, please go to your device's <b>Settings &gt; Apps &gt; HiveZone</b> and allow permissions manually.
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                {notificationPermission === 'granted' && (
-                                    <div className="flex items-center gap-2 text-[#ffc107] font-bold text-[12px] tracking-wide">
-                                        <span className="w-1.5 h-1.5 bg-[#ffc107] rounded-full animate-pulse shadow-glow shadow-yellow-400" />
-                                        ACTIVE ON THIS DEVICE
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
                     {/* View: Delete Account (Beta Message) */}
                     {activeTab === "delete" && (
                         <div className="bg-white rounded-[2.5rem] p-8 shadow-sm flex flex-col items-center justify-center min-h-[300px] text-center">
@@ -490,13 +381,6 @@ export default function SettingsPage() {
                             <p className="text-gray-500 font-medium text-sm max-w-xs">
                                 This feature is not available in beta right now. Please contact support if you need to deactivate your account.
                             </p>
-                        </div>
-                    )}
-
-                    {/* View: Settings Placeholder */}
-                    {(activeTab !== "profile" && activeTab !== "password" && activeTab !== "delete") && (
-                        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm flex flex-col w-full min-h-[200px] items-center justify-center">
-                            <p className="text-gray-500 font-medium text-sm">Select an option from the menu.</p>
                         </div>
                     )}
 

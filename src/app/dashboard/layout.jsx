@@ -7,17 +7,20 @@ import { FeedProvider } from "@/components/providers/FeedProvider";
 import OneSignalInit from "@/components/OneSignalInit";
 import PWAInstall from "@/components/PWAInstall";
 
+import { QueryProvider } from "@/components/providers/QueryProvider";
+
 export default function DashboardLayout({ children }) {
     return (
-        <NotificationProvider>
-            <FeedProvider>
-                <ChatProvider>
+        <QueryProvider>
+            <NotificationProvider>
+                <FeedProvider>
+                    <ChatProvider>
                     <OneSignalInit />
                     <PWAInstall />
-                    <div className="min-h-screen bg-[#fcf6de] text-zinc-900 font-sans flex flex-col">
+                    <div className="fixed inset-0 bg-[#fcf6de] text-zinc-900 font-sans flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
                         <ScrollToTop />
                         <Navbar />
-                        <main className="flex-1 pb-20 md:pb-0">
+                        <main id="main-scroll-area" className="flex-1 min-h-0 relative overflow-y-auto bg-[#fcf6de] flex flex-col">
                             {children}
                         </main>
                         <BottomNav />
@@ -25,5 +28,6 @@ export default function DashboardLayout({ children }) {
                 </ChatProvider>
             </FeedProvider>
         </NotificationProvider>
-    );
+    </QueryProvider>
+);
 }

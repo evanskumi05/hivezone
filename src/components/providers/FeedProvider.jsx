@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState } from 'react';
+import { getProfileFromDisk, saveProfileToDisk } from './QueryProvider';
 
 const FeedContext = createContext();
 
@@ -18,7 +19,23 @@ export const FeedProvider = ({ children }) => {
     const [hasMore, setHasMore] = useState(true);
     const [activeTab, setActiveTab] = useState('all');
     const [scrollPosition, setScrollPosition] = useState(0);
-    const [pageProfile, setPageProfile] = useState(null);
+    
+    const [pageProfile, setPageProfileState] = useState(null);
+    const [hasMounted, setHasMounted] = useState(false);
+
+    // Securely hydrate profile from disk on mount (client-side only)
+    React.useEffect(() => {
+        setHasMounted(true);
+        const stored = getProfileFromDisk();
+        if (stored) {
+            setPageProfileState(stored);
+        }
+    }, []);
+
+    const setPageProfile = (profile) => {
+        setPageProfileState(profile);
+        saveProfileToDisk(profile);
+    };
 
     const resetFeed = () => {
         setPosts([]);
@@ -27,16 +44,20 @@ export const FeedProvider = ({ children }) => {
         setScrollPosition(0);
     };
 
+    // Return empty provider values until the client has mounted to avoid hydration mismatch
+    const contextValue = {
+        posts, setPosts,
+        page, setPage,
+        hasMore, setHasMore,
+        activeTab, setActiveTab,
+        scrollPosition, setScrollPosition,
+        pageProfile: hasMounted ? pageProfile : null,
+        setPageProfile,
+        resetFeed
+    };
+
     return (
-        <FeedContext.Provider value={{
-            posts, setPosts,
-            page, setPage,
-            hasMore, setHasMore,
-            activeTab, setActiveTab,
-            scrollPosition, setScrollPosition,
-            pageProfile, setPageProfile,
-            resetFeed
-        }}>
+        <FeedContext.Provider value={contextValue}>
             {children}
         </FeedContext.Provider>
     );

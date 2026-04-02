@@ -18,6 +18,7 @@ import { getDisplayName } from '@/utils/stringUtils';
 import FeedPostCard from "@/components/FeedPostCard";
 import { useUI } from "@/components/ui/UIProvider";
 import UserBadge from "@/components/ui/UserBadge";
+import PullToRefresh from "@/components/ui/PullToRefresh";
 
 function SearchResults() {
     const searchParams = useSearchParams();
@@ -58,8 +59,9 @@ function SearchResults() {
         }
     }, [query, activeTab, profile?.institution]);
 
-    const handleSearch = async (searchTerm, tab, institution) => {
-        setLoading(true);
+    const handleSearch = async (searchTerm, tab, institution, isPTR = false) => {
+        if (!searchTerm?.trim()) return;
+        if (!isPTR) setLoading(true);
         if (tab === 'profiles') {
             const { data, error } = await supabase
                 .from('public_users')
@@ -258,7 +260,7 @@ function SearchResults() {
 
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#fcf6de] md:bg-[#fcf6de] pb-32 pt-4 md:pt-8 w-full">
+        <div className="flex flex-col flex-1 min-h-0 h-full bg-[#fcf6de] md:bg-[#fcf6de] pt-4 md:pt-8 w-full">
             <div className="max-w-4xl mx-auto w-full px-4 md:px-8">
 
                 {/* Mobile Search Bar */}
@@ -290,7 +292,7 @@ function SearchResults() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-200 mb-6 sticky top-[72px] bg-[#fcf6de] z-10 pt-2 pb-0">
+                <div className="flex border-b border-gray-200 mb-6 sticky top-0 bg-[#fcf6de] z-40 pt-2 pb-0">
                     {['profiles', 'gigs', 'feeds'].map((tab) => (
                         <button
                             key={tab}
@@ -306,7 +308,11 @@ function SearchResults() {
                 </div>
 
                 {/* Results List */}
-                <div className="flex flex-col gap-4">
+                <PullToRefresh 
+                    onRefresh={() => handleSearch(localQuery.trim() || query.trim(), activeTab, profile?.institution, true)}
+                    className="flex-1"
+                >
+                    <div id="dashboard-scroll-container" className="flex flex-col gap-4 min-h-[50vh]">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20">
                             <div className="w-10 h-10 border-4 border-[#ffc107] border-t-transparent rounded-full animate-spin"></div>
@@ -470,8 +476,11 @@ function SearchResults() {
                             <p className="font-bold text-sm">What are you looking for?</p>
                         </div>
                     )}
-                </div>
+                    </div>
+                </PullToRefresh>
             </div>
+            {/* Spacer to clear Bottom Nav */}
+            <div className="h-32 w-full shrink-0"></div>
         </div>
     );
 }
@@ -479,7 +488,7 @@ function SearchResults() {
 export default function SearchPage() {
     return (
         <Suspense fallback={
-            <div className="flex items-center justify-center min-h-screen bg-[#fcf6de]">
+            <div className="flex items-center justify-center flex-1 min-h-0 h-full bg-[#fcf6de]">
                 <div className="w-10 h-10 border-4 border-[#ffc107] border-t-transparent rounded-full animate-spin"></div>
             </div>
         }>
