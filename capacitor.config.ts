@@ -6,10 +6,9 @@ const config: CapacitorConfig = {
   appName: 'HiveZone',
   webDir: 'out',
   server: {
-    // Use the live URL for production access!
     url: 'https://hivezone.co',
-    cleartext: true
-
+    cleartext: true,
+    errorPath: 'offline.html'
   },
   plugins: {
     SplashScreen: {

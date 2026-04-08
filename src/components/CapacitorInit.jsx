@@ -9,7 +9,16 @@ export const CapacitorInit = () => {
     const router = useRouter();
 
     useEffect(() => {
-        if (typeof window === 'undefined' || !window.Capacitor?.isNativePlatform()) return;
+        if (typeof window === 'undefined') return;
+
+        // Register service worker for offline support on web only
+        if ('serviceWorker' in navigator && !window.Capacitor?.isNativePlatform()) {
+            navigator.serviceWorker.register('/sw.js').catch(err =>
+                console.warn('[SW] Registration failed:', err)
+            );
+        }
+
+        if (!window.Capacitor?.isNativePlatform()) return;
 
         const initCapacitor = async () => {
             try {
