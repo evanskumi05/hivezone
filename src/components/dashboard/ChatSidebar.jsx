@@ -48,7 +48,7 @@ export default function ChatSidebar({ activeId }) {
             </div>
 
             {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto px-2 pb-4">
+            <div className="flex-1 overflow-y-auto px-2 pb-4 md:pb-4 pb-20">
                 {loadingConversations ? (
                     <div className="flex flex-col">
                         {[...Array(5)].map((_, i) => <ConversationSkeleton key={i} />)}
