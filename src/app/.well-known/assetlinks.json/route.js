@@ -9,7 +9,7 @@ const assetlinks = [
             namespace: 'android_app',
             package_name: 'co.hivezone.app',
             sha256_cert_fingerprints: [
-                'YOUR_SHA256_FINGERPRINT'
+                'A2:EB:1A:27:AB:7D:82:F2:F9:C6:6D:7D:ED:A0:DE:25:14:7F:3B:4F:07:F6:A2:04:C4:87:E9:91:C7:CA:48:9A'
             ]
         }
     }
