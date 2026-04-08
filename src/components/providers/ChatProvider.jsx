@@ -174,14 +174,10 @@ export default function ChatProvider({ children }) {
                     // Only update global counts if it's NOT the active chat (page-level handles active)
                     if (!isActiveChat) {
                         fetchUnreadCount(currentSession);
-                        
-                        // We also trigger a lazy conversation list refresh so the "latest message" matches
-                        // but only if the user is sent this message
-                        if (newMsg.sender_id !== currentSession?.user?.id) {
-                             fetchConversations(currentSession);
-                        }
+                        fetchConversations(currentSession);
                     } else {
-                        // For active chat, sidebar unread is handled by markAsRead on the page
+                        // Active chat: still refresh sidebar preview for sender's own messages
+                        fetchConversations(currentSession);
                     }
                 }
             )

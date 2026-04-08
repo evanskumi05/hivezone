@@ -17,6 +17,14 @@ import UserBadge from "@/components/ui/UserBadge";
 export default function ChatSidebar({ activeId }) {
     const { conversations, loadingConversations, hideConversation } = useChatConfig();
     const { confirmAction } = useUI();
+    const [search, setSearch] = React.useState("");
+
+    const filtered = search.trim()
+        ? conversations.filter(c =>
+            c.otherUser.computedName?.toLowerCase().includes(search.toLowerCase()) ||
+            c.last_message?.toLowerCase().includes(search.toLowerCase())
+          )
+        : conversations;
 
     return (
         <div className="w-full md:w-[350px] lg:w-[400px] flex flex-col border-r border-gray-100 h-full bg-white shrink-0">
@@ -31,6 +39,8 @@ export default function ChatSidebar({ activeId }) {
                     <HugeiconsIcon icon={Search01Icon} size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search messages"
                         className="w-full bg-gray-50 border-none rounded-2xl py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-[#ffc107]/20 transition-all"
                     />
@@ -43,15 +53,12 @@ export default function ChatSidebar({ activeId }) {
                     <div className="flex flex-col">
                         {[...Array(5)].map((_, i) => <ConversationSkeleton key={i} />)}
                     </div>
-                ) : conversations.length === 0 ? (
+                ) : filtered.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full px-8 text-center gap-4">
-                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center">
-                            <HugeiconsIcon icon={BubbleChatIcon} size={24} className="text-gray-300" />
-                        </div>
-                        <p className="text-[13px] text-gray-500 font-medium">No messages yet</p>
+                        <p className="text-[13px] text-gray-500 font-medium">{search ? 'No results found' : 'No messages yet'}</p>
                     </div>
                 ) : (
-                    conversations.map(chat => (
+                    filtered.map(chat => (
                         <Link
                             key={chat.id}
                             href={`/dashboard/chat/${chat.id}`}

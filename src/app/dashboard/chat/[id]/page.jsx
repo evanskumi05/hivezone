@@ -69,7 +69,8 @@ export default function ChatWindowPage() {
     const [conversation, setConversation] = useState(conversations.find(c => c.id === id) || null);
     const [currentUser, setCurrentUser] = useState(null);
     const [newMessage, setNewMessage] = useState("");
-    const [loading, setLoading] = useState(!messagesCache[id]);
+    // Always show skeleton until currentUser is resolved — prevents "dates only" flash
+    const [loading, setLoading] = useState(true);
     const scrollRef = useRef(null);
     const fileInputRef = useRef(null);
     const isFirstLoad = useRef(true);
@@ -82,7 +83,7 @@ export default function ChatWindowPage() {
 
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-    const [offset, setOffset] = useState(0);
+    const offsetRef = useRef(0);
     const limit = 70;
 
     // Helper to mark messages as read
@@ -101,13 +102,9 @@ export default function ChatWindowPage() {
     // skips incrementing unread counts for messages arriving here
     useEffect(() => {
         if (!id) return;
-        
         setActiveConversation(id);
-        markAsRead(); // Initial mark as read if focused
-
         return () => {
             setActiveConversation(null);
-            // Refresh to get the true DB count after leaving
             refreshUnreadCount();
         };
     }, [id, setActiveConversation, refreshUnreadCount]);
@@ -116,13 +113,13 @@ export default function ChatWindowPage() {
         if (loadingMore || !hasMore) return;
         setLoadingMore(true);
 
-        const newOffset = offset + limit;
+        const currentOffset = offsetRef.current;
         const { data, error } = await supabase
             .from('messages')
             .select('*')
             .eq('conversation_id', id)
             .order('created_at', { ascending: false })
-            .range(newOffset, newOffset + limit - 1);
+            .range(currentOffset, currentOffset + limit - 1);
 
         if (error) {
             console.error("Error fetching older messages:", error);
@@ -130,28 +127,21 @@ export default function ChatWindowPage() {
             return;
         }
 
+        if (data.length === 0) {
+            setHasMore(false);
+            setLoadingMore(false);
+            return;
+        }
+
         if (data.length < limit) setHasMore(false);
 
-        if (data.length > 0) {
-            const olderMessages = data; // Keep them DESC
-            
-            // Maintain scroll position for pagination:
-            // Since we're in flex-col-reverse, appending to the end of the array 
-            // should natively stay stable in many browsers, but we'll reinforce it.
-            const container = scrollRef.current;
-            const scrollPos = container?.scrollTop || 0;
-
-            setMessages(prev => [...prev, ...olderMessages]);
-            setOffset(newOffset);
-
-            // If the browser doesn't natively anchor col-reverse, we'll manually ensure no jump
-            // We want to make sure the scroll position doesn't shift relative to the content.
-            if (container && scrollPos === 0) {
-                // If they are at the absolute bottom, stay there.
-            }
-        } else {
-            setHasMore(false);
-        }
+        // Deduplicate against existing messages before appending
+        setMessages(prev => {
+            const existingIds = new Set(prev.map(m => m.id));
+            const newMsgs = data.filter(m => !existingIds.has(m.id));
+            return [...prev, ...newMsgs];
+        });
+        offsetRef.current = currentOffset + data.length;
         setLoadingMore(false);
     };
 
@@ -163,15 +153,27 @@ export default function ChatWindowPage() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session || cancelled) return;
             setCurrentUser(session.user);
+            // Mark as read now that we have the user
+            if (document.hasFocus()) {
+                supabase.rpc('mark_messages_as_read', {
+                    p_conversation_id: id,
+                    p_user_id: session.user.id
+                });
+            }
 
             // 0. Prefill from provider if available (Instant Header)
             const prefill = conversations.find(c => c.id === id);
-            if (prefill) {
-                setConversation(prefill);
-            }
+            if (prefill) setConversation(prefill);
 
-            const hasCache = !!messagesCache[id];
-            if (!hasCache && !prefill) setLoading(true);
+            // If we have cached messages, unblock render immediately now that currentUser is known
+            if (messagesCache[id]) {
+                const cached = messagesCache[id];
+                setMessages(cached);
+                setHasMore(cached.length >= limit);
+                offsetRef.current = cached.length;
+                setLoading(false);
+                isFirstLoad.current = false;
+            }
 
             // 1. Fetch conversation details (who am I talking to?)
             const { data: convData, error: convError } = await supabase
@@ -200,15 +202,6 @@ export default function ChatWindowPage() {
                 otherUser: otherUserRaw ? { ...otherUserRaw, computedName: getDisplayName(otherUserRaw) } : { computedName: "Somebody", display_name: "Somebody" }
             });
 
-                // Initialize with cache if available
-                if (messagesCache[id]) {
-                    const cached = messagesCache[id];
-                    setMessages(cached);
-                    setHasMore(cached.length >= limit);
-                    setLoading(false);
-                    isFirstLoad.current = false;
-                }
-
                 // 2. Fresh fetch of last 70 messages (background sync)
                 const { data: msgData, error: msgError } = await supabase
                 .from('messages')
@@ -221,6 +214,7 @@ export default function ChatWindowPage() {
                 // messages come back DESC, flex-col-reverse handles the anchor
                 const sortedMessages = (msgData || []);
                 setHasMore(msgData?.length === limit);
+                offsetRef.current = msgData?.length || 0;
 
                 const formattedMessages = sortedMessages.map(m => ({
                     ...m,
@@ -238,13 +232,12 @@ export default function ChatWindowPage() {
                 }
                 setLoading(false);
 
-                // Initial Load Nudge: 
-                // Ensure flex-col-reverse starts at absolute end on first paint
+                // Initial Load Nudge: ensure flex-col-reverse starts at bottom on first paint
                 if (isFirstLoad.current) {
-                    setTimeout(() => {
+                    requestAnimationFrame(() => {
                         if (scrollRef.current) scrollRef.current.scrollTop = 0;
                         isFirstLoad.current = false;
-                    }, 100);
+                    });
                 }
             }
 
@@ -254,16 +247,9 @@ export default function ChatWindowPage() {
                 .on(
                     'postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${id}` },
-                    async (payload) => {
-                        // "Fetch new messages when alert arrives" - Fetching full row from ID
-                        // This prevents heavy realtime payloads and ensures data integrity
-                        const { data: newRow, error } = await supabase
-                           .from('messages')
-                           .select('*')
-                           .eq('id', payload.new.id)
-                           .single();
-
-                        if (error || !newRow) return;
+                    (payload) => {
+                        const newRow = payload.new;
+                        if (!newRow) return;
 
                         setMessages(prev => {
                             if (prev.find(m => m.id === newRow.id)) return prev;
@@ -338,18 +324,14 @@ export default function ChatWindowPage() {
                 supabase.removeChannel(channel);
             }
         };
-    }, [id, currentUser?.id]);
+    }, [id]);
 
     // Handle marking as read when window regains focus
     useEffect(() => {
-        const handleFocus = () => markAsRead();
+        if (!currentUser) return;
+        const handleFocus = () => { if (document.hasFocus()) markAsRead(); };
         window.addEventListener('focus', handleFocus);
-        document.addEventListener('visibilitychange', handleFocus);
-        
-        return () => {
-            window.removeEventListener('focus', handleFocus);
-            document.removeEventListener('visibilitychange', handleFocus);
-        };
+        return () => window.removeEventListener('focus', handleFocus);
     }, [id, currentUser?.id]);
 
     // JS-based scroll-to-bottom removed in favor of Native Reverse Layout
@@ -688,7 +670,7 @@ export default function ChatWindowPage() {
                             <div
                                 ref={scrollRef}
                                 className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6 flex flex-col-reverse gap-4 bg-gray-50/20"
-                                style={{ overflowAnchor: 'auto' }}
+                                style={{ overflowAnchor: 'none' }}
                             >
                                 {items.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-full text-center opacity-30 mt-10 order-first">
