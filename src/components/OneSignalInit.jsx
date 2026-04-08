@@ -5,9 +5,8 @@ import { createClient } from "@/utils/supabase/client";
 import { initOneSignal, loginOneSignal, logoutOneSignal } from "@/utils/OneSignalNative";
 
 export default function OneSignalInit() {
-    const supabase = createClient();
-
     useEffect(() => {
+        const supabase = createClient();
         const initOneSignalUser = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             
@@ -47,7 +46,7 @@ export default function OneSignalInit() {
         return () => {
             authListener?.subscription.unsubscribe();
         };
-    }, [supabase]);
+    }, []);
 
     return null;
 }

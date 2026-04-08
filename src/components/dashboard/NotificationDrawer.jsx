@@ -41,10 +41,8 @@ const NotificationDrawer = ({
     };
 
     const handleEnablePush = async () => {
-        const accepted = await requestNotificationPermission();
-        if (accepted) {
-            setHasPushPermission(true);
-        }
+        const status = await requestNotificationPermission();
+        setHasPushPermission(status === 'granted');
     };
 
     const handleNotificationClick = async (notif) => {

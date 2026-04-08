@@ -70,6 +70,8 @@ export default function NotificationProvider({ children }) {
 
     useEffect(() => {
         let currentSession = null;
+        let softPromptTimer = null;
+        let channel = null;
 
         const init = async () => {
             const { data: { session } } = await supabase.auth.getSession();
@@ -79,64 +81,44 @@ export default function NotificationProvider({ children }) {
             } else {
                 setLoading(false);
             }
+
+            // Soft prompt — only after user is loaded
+            softPromptTimer = setTimeout(async () => {
+                const status = await getNotificationPermissionStatus();
+                if (status === 'default' && !localStorage.getItem('has_prompted_notifications')) {
+                    setShowSoftPrompt(true);
+                    localStorage.setItem('has_prompted_notifications', 'true');
+                }
+            }, 2000);
+
+            if (!session) return;
+
+            // Subscribe with user-scoped filter so only this user's notifications fire
+            channel = supabase
+                .channel('global-notifications')
+                .on(
+                    'postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` },
+                    () => fetchNotifications(currentSession)
+                )
+                .on(
+                    'postgres_changes',
+                    { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` },
+                    () => fetchNotifications(currentSession)
+                )
+                .on(
+                    'postgres_changes',
+                    { event: 'DELETE', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` },
+                    () => fetchNotifications(currentSession)
+                )
+                .subscribe();
         };
 
         init();
-        
-        // Industry Standard: Soft Prompt on Startup
-        const checkSoftPrompt = async () => {
-            // Give it 2 seconds so they can see the dashboard first
-            setTimeout(async () => {
-                const status = await getNotificationPermissionStatus();
-                if (status === 'default') {
-                    const hasPrompted = localStorage.getItem('has_prompted_notifications');
-                    if (!hasPrompted) {
-                        setShowSoftPrompt(true);
-                        localStorage.setItem('has_prompted_notifications', 'true');
-                    }
-                }
-            }, 2000);
-        };
-        checkSoftPrompt();
-
-        // Subscribe to real-time notification changes
-        const channel = supabase
-            .channel('global-notifications')
-            .on(
-                'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'notifications' },
-                (payload) => {
-                    // Only react if the notification belongs to the current user
-                    if (currentSession && payload.new.user_id === currentSession.user.id) {
-                        fetchNotifications(currentSession);
-                        fetchUnreadCount(currentSession);
-                    }
-                }
-            )
-            .on(
-                'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'notifications' },
-                (payload) => {
-                    if (currentSession && payload.new.user_id === currentSession.user.id) {
-                        fetchNotifications(currentSession);
-                        fetchUnreadCount(currentSession);
-                    }
-                }
-            )
-            .on(
-                'postgres_changes',
-                { event: 'DELETE', schema: 'public', table: 'notifications' },
-                (payload) => {
-                    if (currentSession && payload.old.user_id === currentSession.user.id) {
-                        fetchNotifications(currentSession);
-                        fetchUnreadCount(currentSession);
-                    }
-                }
-            )
-            .subscribe();
 
         return () => {
-            supabase.removeChannel(channel);
+            clearTimeout(softPromptTimer);
+            if (channel) supabase.removeChannel(channel);
         };
     }, []);
 
