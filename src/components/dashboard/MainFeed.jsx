@@ -458,8 +458,8 @@ const MainFeed = React.forwardRef(({ onPostsReady, pageProfile: bannerProfile },
                 scrollerRef={(el) => { if (el) el.id = 'dashboard-scroll-container'; }}
                 data={allPosts}
                 computeItemKey={(index, item) => item.id}
-                overscan={1200}
-                increaseViewportBy={{ top: 500, bottom: 500 }}
+                overscan={3000}
+                increaseViewportBy={{ top: 1500, bottom: 1500 }}
                 atBottomThreshold={600}
                 endReached={handleEndReached}
                 className="scrollbar-hide overscroll-contain"

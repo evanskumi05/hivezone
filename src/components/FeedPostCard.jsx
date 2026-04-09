@@ -9,7 +9,6 @@ import {
     Alert01Icon,
     FavouriteIcon,
     Comment01Icon,
-    Image01Icon,
 } from "@hugeicons/core-free-icons";
 import UserBadge from "@/components/ui/UserBadge";
 import Avatar from "@/components/ui/Avatar";
@@ -28,16 +27,6 @@ export default React.memo(function FeedPostCard({
     const { showImage } = useUI();
     const menuRef = useRef(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isMediaLoaded, setIsMediaLoaded] = useState(false);
-
-    useEffect(() => {
-        if (post.media_url && !isMediaLoaded) {
-            const timer = setTimeout(() => {
-                setIsMediaLoaded(true);
-            }, 3000); 
-            return () => clearTimeout(timer);
-        }
-    }, [post.media_url, isMediaLoaded]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -133,12 +122,7 @@ export default React.memo(function FeedPostCard({
                 </Link>
 
                 {post.media_url && (
-                    <div className="relative w-full aspect-[4/5] sm:aspect-square md:aspect-[4/5] rounded-[1.2rem] overflow-hidden mt-2 cursor-pointer group/img bg-gray-50 shadow-sm border border-gray-100/50 flex items-center justify-center">
-                        {!isMediaLoaded && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 z-10 transition-opacity duration-300">
-                                <HugeiconsIcon icon={Image01Icon} className="w-8 h-8 text-gray-300" />
-                            </div>
-                        )}
+                    <div className="relative w-full aspect-[4/5] sm:aspect-square md:aspect-[4/5] rounded-[1.2rem] overflow-hidden mt-2 cursor-pointer group/img bg-gray-100 shadow-sm border border-gray-100/50">
                         {post.media_url.match(/\.(mp4|webm|ogg|mov|m4v|3gp|mkv)$/i) ? (
                             <AutoPauseVideo
                                 src={post.media_url}
@@ -149,16 +133,12 @@ export default React.memo(function FeedPostCard({
                                 src={feedImageUrl(post.media_url)}
                                 alt="Post media"
                                 onClick={() => showImage(fullImageUrl(post.media_url))}
-                                onLoad={() => setIsMediaLoaded(true)}
                                 onError={(e) => {
-                                    if (e.target.src !== post.media_url) {
-                                        e.target.src = post.media_url;
-                                    } else {
-                                        setIsMediaLoaded(true);
-                                    }
+                                    if (e.target.src !== post.media_url) e.target.src = post.media_url;
                                 }}
                                 loading="lazy"
-                                className={`w-full h-full object-cover transition-all duration-700 group-hover/img:scale-[1.02] ${isMediaLoaded ? 'opacity-100 scale-100 blur-0 relative z-20' : 'opacity-0 scale-105 blur-xl absolute inset-0'}`}
+                                decoding="async"
+                                className="w-full h-full object-cover group-hover/img:scale-[1.02] transition-transform duration-300"
                             />
                         )}
                     </div>
