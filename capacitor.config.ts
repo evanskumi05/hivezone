@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://hivezone.co',
     cleartext: true,
-    errorPath: 'offline.html'
+    errorPath: '/offline.html'
   },
   plugins: {
     SplashScreen: {
