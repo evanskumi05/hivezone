@@ -7,12 +7,14 @@
 
 const getFilename = (url, fallback = 'attachment') => {
     try {
-        const parts = new URL(url).pathname.split('/');
-        const raw = decodeURIComponent(parts[parts.length - 1]);
+        const u = new URL(url);
+        const raw = decodeURIComponent(u.pathname.split('/').pop() || '');
         // Strip the timestamp-- prefix: "1719000000000--report.pdf" → "report.pdf"
         const clean = raw.includes('--') ? raw.split('--').slice(1).join('--') : raw;
-        const isUUID = /^[0-9a-f-]{36}$/i.test(clean);
-        return (clean && !isUUID) ? clean : fallback;
+
+        if (!clean || /^[0-9a-f-]{36}$/i.test(clean)) return fallback;
+
+        return clean;
     } catch {
         return fallback;
     }
@@ -29,50 +31,67 @@ export const downloadOrShareFile = async (url, fallbackName = 'attachment') => {
             const { Filesystem, Directory } = await import('@capacitor/filesystem');
             const { Share } = await import('@capacitor/share');
 
-            // 1. Fetch the file
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Fetch failed');
-            const blob = await response.blob();
+            let path;
 
-            // 2. Convert to base64
-            const base64 = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-            });
+            // Use Filesystem.downloadFile if available (Capacitor 5.1+)
+            if (typeof Filesystem.downloadFile === 'function') {
+                try {
+                    // Try to delete existing file first
+                    await Filesystem.deleteFile({
+                        path: filename,
+                        directory: Directory.Documents
+                    });
+                } catch (e) { /* ignore */ }
 
-            // 3. Write to app's cache directory
-            const result = await Filesystem.writeFile({
-                path: filename,
-                data: base64,
-                directory: Directory.Cache,
-            });
+                const result = await Filesystem.downloadFile({
+                    url,
+                    path: filename,
+                    directory: Directory.Documents,
+                });
+                path = result.path;
+            } else {
+                // Fallback for older Capacitor versions
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Fetch failed');
+                const blob = await res.blob();
 
-            // 4. Open native share sheet — user can save to Files, open with app, etc.
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+
+                const result = await Filesystem.writeFile({
+                    path: filename,
+                    data: base64,
+                    directory: Directory.Documents,
+                });
+                path = result.uri;
+            }
+
+            // Share using both 'url' and 'files' for maximum platform compatibility
             await Share.share({
                 title: filename,
-                url: result.uri,
-                dialogTitle: 'Open or save file',
+                url: path,
+                files: [path],
+                dialogTitle: 'Save or share file',
             });
         } catch (error) {
-            console.error('[fileDownload] Native share failed:', error);
-            // Fallback: open in browser
+            console.error('[fileDownload] Native failed:', error);
+            // Final fallback: attempt to open in browser
             window.open(url, '_blank', 'noopener,noreferrer');
         }
     } else {
-        // Web: standard anchor download
+        // Web: try direct anchor download first (more memory efficient)
         try {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            const blobUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = blobUrl;
+            a.href = url;
             a.download = filename;
+            a.target = '_blank';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            window.URL.revokeObjectURL(blobUrl);
         } catch (error) {
             console.error('[fileDownload] Web download failed:', error);
             window.open(url, '_blank', 'noopener,noreferrer');
