@@ -75,16 +75,20 @@ export const downloadOrShareFile = async (url, fallbackName = 'attachment') => {
                 });
                 path = result.uri;
             }
-
-            // Share using STRICTLY 'files' for local native files (no text URL confusion)
-            await Share.share({
-                title: filename,
-                files: [path],
-                dialogTitle: 'Save or share file',
-            });
+            try {
+                // Share using STRICTLY 'files' for local native files (no text URL confusion)
+                await Share.share({
+                    title: filename,
+                    files: [path],
+                    dialogTitle: 'Save or share file',
+                });
+            } catch (shareErr) {
+                console.log('[fileDownload] User cancelled share:', shareErr);
+                // Do not fallback to browser if they just cancelled the share sheet!
+            }
         } catch (error) {
-            console.error('[fileDownload] Native failed:', error);
-            // Final fallback: attempt to open in browser
+            console.error('[fileDownload] Native download process failed:', error);
+            // Final fallback: attempt to open in browser ONLY if the download logic failed
             window.open(url, '_blank', 'noopener,noreferrer');
         }
     } else {
