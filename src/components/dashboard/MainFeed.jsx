@@ -161,6 +161,20 @@ const FeedListFooter = React.memo(({ isFetchingNextPage, hasNextPage, isEmpty, i
 ));
 FeedListFooter.displayName = "FeedListFooter";
 
+const VirtuosoHeader = React.forwardRef(({ context }, ref) => (
+    <div ref={ref}>
+        <FeedListHeader {...context} />
+    </div>
+));
+VirtuosoHeader.displayName = "VirtuosoHeader";
+
+const VirtuosoFooter = React.forwardRef(({ context }, ref) => (
+    <div ref={ref}>
+        <FeedListFooter {...context} />
+    </div>
+));
+VirtuosoFooter.displayName = "VirtuosoFooter";
+
 const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
     const { showToast, confirmAction, openReportModal } = useUI();
     const queryClient = useQueryClient();
@@ -183,7 +197,15 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
                     .eq('school_id', sid).order('likes_count', { ascending: false }).limit(30);
                 if (error) throw error;
                 const { data: { session } } = await supabase.auth.getSession();
-                return (fd || []).map(p => ({ ...p, is_liked: false })); // Note: is_liked check will need a separate tiny fetch or a join if strictly necessary, but de-normalizing it is harder. 
+                
+                const postIds = (fd || []).map(p => p.id);
+                let likedSet = new Set();
+                if (postIds.length > 0 && session?.user?.id) {
+                    const { data: userLikes } = await supabase.from('feed_likes').select('feed_id').eq('user_id', session.user.id).in('feed_id', postIds);
+                    if (userLikes) likedSet = new Set(userLikes.map(l => l.feed_id));
+                }
+                
+                return (fd || []).map(p => ({ ...p, is_liked: likedSet.has(p.id) }));
             }
             const { data: fd, error } = await supabase.from("feeds")
                 .select(`*, author:users!inner(display_name,username,profile_picture,is_verified,is_admin,school_id)`)
@@ -191,10 +213,12 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
             if (error) throw error;
             const { data: { session } } = await supabase.auth.getSession();
             
-            // To handle is_liked without a join, we fetch the IDs of liked posts for this user in this range
             const postIds = (fd || []).map(p => p.id);
-            const { data: userLikes } = await supabase.from('feed_likes').select('feed_id').eq('user_id', session?.user?.id).in('feed_id', postIds);
-            const likedSet = new Set(userLikes?.map(l => l.feed_id) || []);
+            let likedSet = new Set();
+            if (postIds.length > 0 && session?.user?.id) {
+                const { data: userLikes } = await supabase.from('feed_likes').select('feed_id').eq('user_id', session.user.id).in('feed_id', postIds);
+                if (userLikes) likedSet = new Set(userLikes.map(l => l.feed_id));
+            }
 
             return (fd || []).map(p => ({ ...p, is_liked: likedSet.has(p.id) }));
         },
@@ -307,9 +331,11 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
         const actorName = profile?.display_name || profile?.first_name || 'User';
         
         // Optimistic Update
-        queryClient.setQueryData(['FEED_STREAM', activeTab, profile?.school_id], (old) => {
-            if (!old) return old;
-            return { ...old, pages: old.pages.map(page => page.map(p => p.id === postId ? { ...p, is_liked: !isLiked, likes_count: isLiked ? Math.max(0, p.likes_count - 1) : p.likes_count + 1 } : p)) };
+        ["all", "trending"].forEach((tab) => {
+            queryClient.setQueryData(['FEED_STREAM', tab, profile?.school_id], (old) => {
+                if (!old) return old;
+                return { ...old, pages: old.pages.map(page => page.map(p => p.id === postId ? { ...p, is_liked: !isLiked, likes_count: isLiked ? Math.max(0, p.likes_count - 1) : p.likes_count + 1 } : p)) };
+            });
         });
 
         // Background Processing via Edge Function
@@ -344,29 +370,18 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
 
     const handleReportPost = useCallback((post) => openReportModal({ item_id: post.id, item_type: 'feed' }), [openReportModal]);
 
-    // isPosting is the only dep that changes on keypress — but PostComposer is memo'd
-    // and only re-renders when isPosting actually flips (on submit), not on every keystroke
-    const Header = useMemo(() => () => (
-        <FeedListHeader
-            profile={profile}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            isLoading={isLoading}
-            hasNoPosts={allPosts.length === 0}
-            onPost={handlePost}
-            isPosting={isPosting}
-        />
-    ), [profile, activeTab, handleTabChange, isLoading, allPosts.length, handlePost, isPosting]);
-
-    const Footer = useMemo(() => () => (
-        <FeedListFooter
-            isFetchingNextPage={isFetchingNextPage}
-            hasNextPage={hasNextPage}
-            isEmpty={allPosts.length === 0}
-            isLoading={isLoading}
-            activeTab={activeTab}
-        />
-    ), [isFetchingNextPage, hasNextPage, allPosts.length, isLoading, activeTab]);
+    const virtuosoContext = useMemo(() => ({
+        profile,
+        activeTab,
+        onTabChange: handleTabChange,
+        isLoading,
+        hasNoPosts: allPosts.length === 0,
+        onPost: handlePost,
+        isPosting,
+        isFetchingNextPage,
+        hasNextPage,
+        isEmpty: allPosts.length === 0
+    }), [profile, activeTab, handleTabChange, isLoading, allPosts.length, handlePost, isPosting, isFetchingNextPage, hasNextPage]);
 
     return (
         <div className="flex flex-col w-full flex-1 min-h-0 h-full">
@@ -380,7 +395,8 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
                 atBottomThreshold={1000} 
                 endReached={() => { if (hasNextPage && !isFetchingNextPage) fetchNextPage(); }}
                 className="scrollbar-hide overscroll-contain"
-                components={{ Header, Footer }}
+                context={virtuosoContext}
+                components={{ Header: VirtuosoHeader, Footer: VirtuosoFooter }}
                 itemContent={(idx, post) => (
                     <div className="pb-3 px-0.5">
                         <FeedPostCard post={post} profile={profile} onDelete={handleDeletePost} onReport={handleReportPost} onLike={handleLike} />

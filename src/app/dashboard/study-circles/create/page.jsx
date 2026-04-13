@@ -135,10 +135,10 @@ export default function CreateCirclePage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#fcf6de] md:p-6 lg:p-10 pb-48 md:pb-12">
+        <div className="min-h-screen bg-[#fcf6de] p-3 sm:p-6 lg:p-10 pb-32 md:pb-12">
             <div className="max-w-3xl mx-auto">
                 {/* Header Navigation */}
-                <div className="flex items-center justify-between px-6 pt-2 pb-6 md:px-0">
+                <div className="flex items-center justify-between px-3 sm:px-6 pt-2 pb-6 md:px-0">
                     <Link
                         href="/dashboard/study-circles"
                         className="group flex items-center gap-3 active:scale-95 transition-transform"
@@ -150,7 +150,7 @@ export default function CreateCirclePage() {
                     </Link>
                 </div>
 
-                <div className="bg-white md:rounded-[3rem] shadow-xl shadow-black/5 border border-gray-50/50 overflow-hidden">
+                <div className="bg-white rounded-[2rem] md:rounded-[3rem] shadow-xl shadow-black/5 border border-gray-50/50 overflow-hidden">
                     {/* Visual Banner Identity */}
                     <div className="h-24 bg-gradient-to-r from-zinc-900 to-zinc-800 w-full" />
 
@@ -295,7 +295,7 @@ export default function CreateCirclePage() {
             {showSuccessModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-md animate-in fade-in duration-300" />
-                    <div className="relative w-full max-w-md bg-white rounded-[3rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300 text-center border-4 border-white">
+                    <div className="relative z-50 w-full max-w-md bg-white rounded-[2.5rem] p-6 sm:p-10 shadow-2xl animate-in zoom-in-95 duration-300 text-center border-4 border-white mx-0 sm:mx-4 overflow-hidden">
                         <div className="w-20 h-20 bg-[#ffc107] text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-200">
                             <HugeiconsIcon icon={Tick01Icon} className="w-10 h-10" />
                         </div>

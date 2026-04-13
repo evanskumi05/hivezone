@@ -74,17 +74,17 @@ const ReportModal = ({ item_id, item_type, onClose, onSuccess, showToast }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-6 backdrop-blur-sm" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/40 z-[10000] flex items-center justify-center p-4 sm:p-6 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose}>
             <div
-                className="w-full max-w-md border-2 border-[#ffc107]/40 rounded-[2rem] px-6 py-10 space-y-6 bg-[#f5f5f5]"
+                className="w-full max-w-md bg-white rounded-[3rem] p-8 sm:p-10 shadow-2xl border-4 border-white animate-in zoom-in-95 duration-300 relative overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div>
-                    <h2 className="text-2xl text-black font-bold font-manyto">Report Content</h2>
-                    <p className="text-sm text-zinc-500 mt-1">Help us keep HiveZone safe for everyone.</p>
+                <div className="mb-8">
+                    <h2 className="text-3xl font-black font-newyork text-gray-900 mb-2">Report Content</h2>
+                    <p className="text-gray-500 font-bold leading-relaxed">Help us keep HiveZone safe for everyone.</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="text-black space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Reason Dropdown */}
                     <CustomDropdown
                         label="Reason for reporting"
@@ -96,34 +96,38 @@ const ReportModal = ({ item_id, item_type, onClose, onSuccess, showToast }) => {
 
                     {/* Details */}
                     <div>
-                        <label className="block text-black text-sm font-semibold mb-2">
-                            Additional details <span className="text-zinc-400 font-normal">(optional)</span>
+                        <label className="block text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-1 mb-2">
+                            Additional details <span className="font-normal normal-case tracking-normal text-gray-300 mt-1 block sm:inline">(optional)</span>
                         </label>
                         <textarea
                             value={details}
                             onChange={(e) => setDetails(e.target.value)}
                             placeholder="Any additional context..."
                             rows={4}
-                            className="w-full bg-white border border-zinc-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#ffc107] transition-colors resize-none placeholder:text-zinc-400 text-zinc-900"
+                            className="w-full bg-gray-50/50 border border-transparent rounded-[1.5rem] p-4 font-bold text-gray-900 focus:bg-white focus:border-[#ffc107] focus:ring-4 focus:ring-[#ffc107]/10 outline-none transition-all resize-none placeholder:text-gray-300"
                         />
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col gap-3 pt-2">
+                    <div className="flex flex-col gap-3 pt-4">
                         <button
                             type="submit"
                             disabled={isSubmitting || !reason}
-                            className="w-full bg-[#ffc107] text-black font-semibold text-base py-3 flex items-center justify-center gap-2 hover:bg-[#ffca2c] transition-colors active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full h-16 bg-black text-white rounded-full font-black text-lg hover:bg-zinc-800 active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:scale-100"
                         >
-                            {isSubmitting && (
-                                <span className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                            {isSubmitting ? (
+                                <>
+                                    <div className="w-5 h-5 border-4 border-[#ffc107] border-t-transparent rounded-full animate-spin"></div>
+                                    <span>Submitting...</span>
+                                </>
+                            ) : (
+                                "Submit Report"
                             )}
-                            {isSubmitting ? "Submitting..." : "Submit Report"}
                         </button>
                         <button
                             type="button"
                             onClick={onClose}
-                            className="w-full text-sm font-semibold text-zinc-500 py-2 hover:text-zinc-800 transition-colors"
+                            className="w-full h-14 rounded-full font-bold text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors active:scale-95"
                         >
                             Cancel
                         </button>

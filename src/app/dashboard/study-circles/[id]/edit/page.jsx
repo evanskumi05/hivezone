@@ -192,10 +192,10 @@ export default function EditCirclePage({ params }) {
     }
 
     return (
-        <div className="min-h-screen bg-[#fcf6de] md:p-6 lg:p-10 pb-48 md:pb-12">
+        <div className="min-h-screen bg-[#fcf6de] p-3 sm:p-6 lg:p-10 pb-32 md:pb-12">
             <div className="max-w-3xl mx-auto">
                 {/* Header Navigation */}
-                <div className="flex items-center justify-between px-6 pt-2 pb-6 md:px-0">
+                <div className="flex items-center justify-between px-3 sm:px-6 pt-2 pb-6 md:px-0">
                     <Link
                         href="/dashboard/study-circles"
                         className="group flex items-center gap-3 active:scale-95 transition-transform"
@@ -215,7 +215,7 @@ export default function EditCirclePage({ params }) {
                     </button>
                 </div>
 
-                <div className="bg-white md:rounded-[3rem] shadow-xl shadow-black/5 border border-gray-50/50 overflow-hidden">
+                <div className="bg-white rounded-[2rem] md:rounded-[3rem] shadow-xl shadow-black/5 border border-gray-50/50 overflow-hidden">
                     {/* Visual Banner Identity */}
                     <div className="h-24 bg-gradient-to-r from-[#ffc107] to-[#ffb300] w-full" />
 
