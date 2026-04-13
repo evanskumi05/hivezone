@@ -20,7 +20,7 @@ import UserBadge from "@/components/ui/UserBadge";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 
 export default function ProfilePage() {
-    const { showToast, openReportModal, showImage } = useUI();
+    const { showToast, openReportModal, showImage, confirmAction } = useUI();
     const router = useRouter();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -167,20 +167,29 @@ export default function ProfilePage() {
 
 
     const handleDeletePost = async (postId, mediaUrl) => {
-        try {
-            const { error } = await supabase
-                .from('feeds')
-                .delete()
-                .eq('id', postId);
+        confirmAction({
+            title: "Delete Post",
+            message: "Are you sure you want to delete this post? This action cannot be undone.",
+            confirmText: "Delete",
+            cancelText: "Cancel",
+            type: "danger",
+            onConfirm: async () => {
+                try {
+                    const { error } = await supabase
+                        .from('feeds')
+                        .delete()
+                        .eq('id', postId);
 
-            if (error) throw error;
+                    if (error) throw error;
 
-            setUserPosts(prev => prev.filter(p => p.id !== postId));
-            showToast("Post deleted successfully.", "success");
-        } catch (error) {
-            console.error("Error deleting post:", error);
-            showToast("Failed to delete post.", "error");
-        }
+                    setUserPosts(prev => prev.filter(p => p.id !== postId));
+                    showToast("Post deleted successfully.", "success");
+                } catch (error) {
+                    console.error("Error deleting post:", error);
+                    showToast("Failed to delete post.", "error");
+                }
+            }
+        });
     };
 
     const openEditModal = () => {
