@@ -1,22 +1,29 @@
 const CACHE_NAME = 'hivezone-v1';
 
-// App shell routes to cache on install
+// App shell routes to cache on install (Commonly visited standalone pages)
 const APP_SHELL = [
     '/',
     '/dashboard',
     '/dashboard/chat',
-    '/dashboard/feed',
-    '/dashboard/gigs',
     '/dashboard/search',
     '/dashboard/notifications',
     '/dashboard/profile',
     '/dashboard/settings',
 ];
 
-// ─── Install: cache app shell ───────────────────────────────────────────────
+// ─── Install: cache app shell resiliently ──────────────────────────────────
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+        caches.open(CACHE_NAME).then(async (cache) => {
+            console.log('📦 Service Worker: Pre-caching App Shell');
+            for (const url of APP_SHELL) {
+                try {
+                    await cache.add(url);
+                } catch (err) {
+                    console.warn(`⚠️ SW: Failed to cache ${url}. Skipping.`);
+                }
+            }
+        })
     );
     self.skipWaiting();
 });
@@ -31,7 +38,7 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// ─── Fetch strategy ─────────────────────────────────────────────────────────
+// ─── Fetch strategy: Stale-While-Revalidate (SWR) ──────────────────────────
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
@@ -50,59 +57,23 @@ self.addEventListener('fetch', (event) => {
     ];
     if (networkOnly.some(p => url.href.includes(p))) return;
 
-    // 3. Cache-first for static assets (_next/static, fonts, images, icons)
-    if (
-        url.pathname.startsWith('/_next/static') ||
-        url.pathname.startsWith('/fonts') ||
-        url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|woff|woff2|otf|ttf)$/)
-    ) {
-        event.respondWith(
-            caches.match(request).then(cached => {
-                if (cached) return cached;
-                return fetch(request).then(response => {
-                    if (response.ok) {
-                        const clone = response.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
-                    }
-                    return response;
-                });
-            })
-        );
-        return;
-    }
-
-    // 4. Network-first for HTML navigation — fallback to cache when offline
-    if (request.mode === 'navigate') {
-        event.respondWith(
-            fetch(request)
-                .then(response => {
-                    // Cache the fresh page
-                    if (response.ok) {
-                        const clone = response.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
-                    }
-                    return response;
-                })
-                .catch(() => {
-                    // Offline: serve cached version of this page, or fallback to /dashboard
-                    return caches.match(request)
-                        || caches.match('/dashboard')
-                        || caches.match('/');
-                })
-        );
-        return;
-    }
-
-    // 5. Network-first for everything else, cache as fallback
+    // 3. Strategy: Stale-While-Revalidate (The Speed King)
+    // We serve the cached version in 0ms, and update the cache in the background.
     event.respondWith(
-        fetch(request)
-            .then(response => {
-                if (response.ok) {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
-                }
-                return response;
-            })
-            .catch(() => caches.match(request))
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.match(request).then((cachedResponse) => {
+                const fetchPromise = fetch(request).then((networkResponse) => {
+                    if (networkResponse.ok) {
+                        cache.put(request, networkResponse.clone());
+                    }
+                    return networkResponse;
+                }).catch(() => {
+                    // Fail silently in background if offline
+                });
+
+                // Return cached version immediately if available, else wait for network
+                return cachedResponse || fetchPromise;
+            });
+        })
     );
 });

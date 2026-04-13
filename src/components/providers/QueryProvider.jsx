@@ -11,13 +11,19 @@ import { get, set, del, keys } from "idb-keyval";
 const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
-            staleTime: 1000 * 60 * 15,
+            staleTime: 1000 * 60, // Default 1 minute
             gcTime: 1000 * 60 * 60 * 24,
             retry: 2,
             refetchOnWindowFocus: false,
         },
     },
 });
+
+// Granular Calibration
+queryClient.setQueryDefaults(['FEED_STREAM'], { staleTime: 1000 * 60 * 15 }); // 15 mins
+queryClient.setQueryDefaults(['NOTIFICATIONS'], { staleTime: 1000 * 10 });    // 10 secs
+queryClient.setQueryDefaults(['CONVERSATIONS'], { staleTime: 1000 * 5 });     // 5 secs
+queryClient.setQueryDefaults(['USER_PROFILE'], { staleTime: 1000 * 60 * 5 });  // 5 mins
 
 /**
  * Robust IndexedDB Persister (No 5MB limit).

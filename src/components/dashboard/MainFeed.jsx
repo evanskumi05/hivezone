@@ -22,11 +22,14 @@ const PostComposer = React.memo(({ profile, onPost, isPosting }) => {
     const [mediaPreview, setMediaPreview] = useState(null);
     const [mediaType, setMediaType] = useState("image");
 
+    const selectedThumbnailRef = useRef(null);
+
     const handlePost = useCallback(() => {
         const content = textareaRef.current?.value || "";
-        onPost(content, selectedMediaRef.current, () => {
+        onPost(content, selectedMediaRef.current, selectedThumbnailRef.current, () => {
             if (textareaRef.current) textareaRef.current.value = "";
             selectedMediaRef.current = null;
+            selectedThumbnailRef.current = null;
             setMediaPreview(null);
         });
     }, [onPost]);
@@ -40,6 +43,8 @@ const PostComposer = React.memo(({ profile, onPost, isPosting }) => {
                 <div className="flex-1">
                     <textarea
                         ref={textareaRef}
+                        id="buzz-input"
+                        aria-label="What's happening?"
                         placeholder="What's happening on campus?"
                         defaultValue=""
                         className="w-full bg-transparent border-none outline-none resize-none text-gray-800 placeholder:text-gray-400 font-bold text-[18px] pt-3 min-h-[60px]"
@@ -64,9 +69,31 @@ const PostComposer = React.memo(({ profile, onPost, isPosting }) => {
                         onChange={(e) => {
                             const f = e.target.files[0];
                             if (f) {
-                                setMediaType(f.type.startsWith("video/") ? "video" : "image");
+                                const isVideo = f.type.startsWith("video/");
+                                setMediaType(isVideo ? "video" : "image");
                                 selectedMediaRef.current = f;
                                 setMediaPreview(URL.createObjectURL(f));
+
+                                if (isVideo) {
+                                    // Extract high-quality thumbnail frame instantly
+                                    const video = document.createElement('video');
+                                    video.preload = 'metadata';
+                                    video.muted = true;
+                                    video.src = URL.createObjectURL(f);
+                                    video.onloadedmetadata = () => {
+                                        video.currentTime = 0.5;
+                                        video.onseeked = () => {
+                                            const canvas = document.createElement('canvas');
+                                            canvas.width = video.videoWidth;
+                                            canvas.height = video.videoHeight;
+                                            canvas.getContext('2d').drawImage(video, 0, 0);
+                                            canvas.toBlob((blob) => {
+                                                selectedThumbnailRef.current = blob;
+                                            }, 'image/jpeg', 0.8);
+                                            URL.revokeObjectURL(video.src);
+                                        };
+                                    };
+                                }
                             }
                         }}
                     />
@@ -152,19 +179,24 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
             if (activeTab === 'trending') {
                 if (pageParam > 0) return [];
                 const { data: fd, error } = await supabase.from("feeds")
-                    .select(`*, author:users!inner(display_name,first_name,username,profile_picture,is_verified,is_admin,school_id), likes:feed_likes(user_id), comments:feed_comments(count)`)
-                    .eq('school_id', sid).order('created_at', { ascending: false }).limit(30);
+                    .select(`*, author:users!inner(display_name,first_name,username,profile_picture,is_verified,is_admin,school_id)`)
+                    .eq('school_id', sid).order('likes_count', { ascending: false }).limit(30);
                 if (error) throw error;
                 const { data: { session } } = await supabase.auth.getSession();
-                return (fd || []).map(p => ({ ...p, likes_count: p.likes?.length || 0, comments_count: p.comments?.[0]?.count || 0, is_liked: p.likes?.some(l => l.user_id === session?.user?.id) }))
-                    .sort((a, b) => (b.likes_count + b.comments_count) - (a.likes_count + a.comments_count)).slice(0, 15);
+                return (fd || []).map(p => ({ ...p, is_liked: false })); // Note: is_liked check will need a separate tiny fetch or a join if strictly necessary, but de-normalizing it is harder. 
             }
             const { data: fd, error } = await supabase.from("feeds")
-                .select(`*, author:users!inner(display_name,username,profile_picture,is_verified,is_admin,school_id), likes:feed_likes(user_id), comments:feed_comments(count)`)
+                .select(`*, author:users!inner(display_name,username,profile_picture,is_verified,is_admin,school_id)`)
                 .eq('school_id', sid).order('created_at', { ascending: false }).range(pageParam * limit, pageParam * limit + limit - 1);
             if (error) throw error;
             const { data: { session } } = await supabase.auth.getSession();
-            return (fd || []).map(p => ({ ...p, likes_count: p.likes?.length || 0, comments_count: p.comments?.[0]?.count || 0, is_liked: p.likes?.some(l => l.user_id === session?.user?.id) }));
+            
+            // To handle is_liked without a join, we fetch the IDs of liked posts for this user in this range
+            const postIds = (fd || []).map(p => p.id);
+            const { data: userLikes } = await supabase.from('feed_likes').select('feed_id').eq('user_id', session?.user?.id).in('feed_id', postIds);
+            const likedSet = new Set(userLikes?.map(l => l.feed_id) || []);
+
+            return (fd || []).map(p => ({ ...p, is_liked: likedSet.has(p.id) }));
         },
         getNextPageParam: (lastPage, allPages) => lastPage.length === limit ? allPages.length : undefined,
         staleTime: 1000 * 60 * 5,
@@ -182,12 +214,53 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
     }, [activeTab, setActiveTab]);
 
     // Receives content + media from PostComposer refs, plus a reset callback
-    const handlePost = useCallback(async (content, mediaFile, resetComposer) => {
+    const handlePost = useCallback(async (content, mediaFile, thumbnailBlob, resetComposer) => {
         if (!content.trim() && !mediaFile) return;
         setIsPosting(true);
+
+        const tempId = `temp-${Date.now()}`;
+        const localMediaUrl = mediaFile ? URL.createObjectURL(mediaFile) : null;
+        const localThumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
+        
+        // 1. OPTIMISTIC UPDATE: Insert "Ghost Post" immediately
+        const ghostPost = {
+            id: tempId,
+            user_id: profile?.id,
+            content,
+            media_url: localMediaUrl,
+            thumbnail_url: localThumbnailUrl, // Use the extracted local frame immediately
+            school_id: profile?.school_id,
+            created_at: new Date().toISOString(),
+            likes_count: 0,
+            comments_count: 0,
+            is_liked: false,
+            is_ghost: true,
+            author: profile
+        };
+
+        queryClient.setQueryData(['FEED_STREAM', 'all', profile?.school_id], (old) => {
+            if (!old) return { pages: [[ghostPost]], pageParams: [0] };
+            return { ...old, pages: [[ghostPost, ...old.pages[0]], ...old.pages.slice(1)] };
+        });
+
+        resetComposer();
+
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            let url = null;
+            let finalMediaUrl = null;
+            let finalThumbnailUrl = null;
+
+            // Upload Thumbnail if it exists
+            if (thumbnailBlob) {
+                const thumbName = `post-media/thumb-${session.user.id}-${Date.now()}.jpg`;
+                const uploadRes = await fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fileName: thumbName, fileType: 'image/jpeg' }) });
+                if (uploadRes.ok) {
+                    const { uploadUrl, publicUrl } = await uploadRes.json();
+                    await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": 'image/jpeg' }, body: thumbnailBlob });
+                    finalThumbnailUrl = publicUrl;
+                }
+            }
+
             if (mediaFile) {
                 const fileToUpload = await compressForFeed(mediaFile);
                 const fileExt = fileToUpload.name.split('.').pop();
@@ -197,42 +270,62 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
                 const { uploadUrl, publicUrl } = await uploadRes.json();
                 const r2Res = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": fileToUpload.type }, body: fileToUpload });
                 if (!r2Res.ok) throw new Error("Failed to upload");
-                url = publicUrl;
+                finalMediaUrl = publicUrl;
             }
-            const { data: newPost, error } = await supabase.from('feeds')
-                .insert([{ user_id: session.user.id, content, media_url: url, school_id: profile?.school_id }])
+
+            const { data: realPost, error } = await supabase.from('feeds')
+                .insert([{ user_id: session.user.id, content, media_url: finalMediaUrl, thumbnail_url: finalThumbnailUrl, school_id: profile?.school_id }])
                 .select("*, author:users!inner(*)").single();
+
             if (error) throw error;
-            const freshPost = { ...newPost, likes_count: 0, comments_count: 0, is_liked: false };
+
             queryClient.setQueryData(['FEED_STREAM', 'all', profile?.school_id], (old) => {
-                if (!old) return { pages: [[freshPost]], pageParams: [0] };
-                return { ...old, pages: [[freshPost, ...old.pages[0]], ...old.pages.slice(1)] };
+                if (!old) return old;
+                return {
+                    ...old,
+                    pages: old.pages.map((page, i) => i === 0 ? [realPost, ...page.filter(p => p.id !== tempId)] : page)
+                };
             });
-            resetComposer();
+            
             showToast("Successfully buzzed!", "success");
-        } catch { showToast("Failed to create post.", "error"); }
-        finally { setIsPosting(false); }
+        } catch (err) {
+            console.error("Failed to post:", err);
+            showToast("Failed to create post.", "error");
+            queryClient.setQueryData(['FEED_STREAM', 'all', profile?.school_id], (old) => {
+                if (!old) return old;
+                return { ...old, pages: old.pages.map(page => page.filter(p => p.id !== tempId)) };
+            });
+        } finally {
+            setIsPosting(false);
+            if (localMediaUrl) URL.revokeObjectURL(localMediaUrl);
+            if (localThumbnailUrl) URL.revokeObjectURL(localThumbnailUrl);
+        }
     }, [profile, supabase, queryClient, showToast]);
 
     const handleLike = useCallback(async (post) => {
         const isLiked = post.is_liked; const postId = post.id;
-        const uid = (await supabase.auth.getSession()).data.session?.user?.id;
+        const actorName = profile?.display_name || profile?.first_name || 'User';
+        
+        // Optimistic Update
         queryClient.setQueryData(['FEED_STREAM', activeTab, profile?.school_id], (old) => {
             if (!old) return old;
-            return { ...old, pages: old.pages.map(page => page.map(p => p.id === postId ? { ...p, is_liked: !isLiked, likes_count: isLiked ? p.likes_count - 1 : p.likes_count + 1 } : p)) };
+            return { ...old, pages: old.pages.map(page => page.map(p => p.id === postId ? { ...p, is_liked: !isLiked, likes_count: isLiked ? Math.max(0, p.likes_count - 1) : p.likes_count + 1 } : p)) };
         });
-        if (isLiked) { await supabase.from('feed_likes').delete().eq('feed_id', postId).eq('user_id', uid); }
-        else {
-            await supabase.from('feed_likes').insert([{ feed_id: postId, user_id: uid }]);
-            if (post.user_id !== uid) {
-                const actorName = profile?.display_name || profile?.first_name || 'User';
-                const { data: ex } = await supabase.from('notifications').select('id').eq('user_id', post.user_id).eq('type', 'like').eq('entity_id', postId).eq('is_read', false).single();
-                if (ex) { await supabase.from('notifications').update({ actor_id: uid, message: `${actorName} and others liked your post`, created_at: new Date().toISOString() }).eq('id', ex.id); }
-                else {
-                    await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: uid, type: 'like', entity_type: 'feed', entity_id: postId, message: `liked your post` });
-                    fetch('/api/notifications/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userIds: [post.user_id], title: actorName, message: "liked your post", url: `${window.location.origin}/dashboard` }) }).catch(() => {});
+
+        // Background Processing via Edge Function
+        try {
+            const { error } = await supabase.functions.invoke('process-post-action', {
+                body: { 
+                    postId, 
+                    action: isLiked ? 'unlike' : 'like',
+                    actorName
                 }
-            }
+            });
+            if (error) throw error;
+        } catch (err) {
+            console.error("Failed to process like:", err);
+            // Revert optimistic update on failure
+            queryClient.invalidateQueries(['FEED_STREAM', activeTab, profile?.school_id]);
         }
     }, [activeTab, profile, supabase, queryClient]);
 
@@ -282,9 +375,9 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
                 scrollerRef={(el) => { if (el) el.id = 'dashboard-scroll-container'; }}
                 data={allPosts}
                 computeItemKey={(index, item) => item.id}
-                overscan={3000}
-                increaseViewportBy={{ top: 1500, bottom: 1500 }}
-                atBottomThreshold={600}
+                overscan={1200} // Lower for better FPS
+                increaseViewportBy={{ top: 1200, bottom: 1200 }} 
+                atBottomThreshold={1000} 
                 endReached={() => { if (hasNextPage && !isFetchingNextPage) fetchNextPage(); }}
                 className="scrollbar-hide overscroll-contain"
                 components={{ Header, Footer }}

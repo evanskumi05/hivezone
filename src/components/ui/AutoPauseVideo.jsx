@@ -10,89 +10,24 @@ import {
     Maximize01Icon,
     Minimize01Icon
 } from "@hugeicons/core-free-icons";
-import { get, set } from "idb-keyval";
 
 /**
  * Full-Screen Video Launcher with History Tracking.
- * - In-Feed: Static Thumbnail + Play Button.
- * - In-View: Automatic Full-Screen Immersive View.
- * - Back Button Integration: Hardware back button closes the video.
+ * Optimized for Phase 5: Zero-CPU Scrolling.
  */
-export default React.memo(function AutoPauseVideo({ src, className, onClick, ...props }) {
+export default React.memo(function AutoPauseVideo({ src, poster, className, onClick, ...props }) {
     const videoRef = useRef(null);
     const containerRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [hasStarted, setHasStarted] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
-    const [posterUrl, setPosterUrl] = useState(null);
+    const [posterUrl, setPosterUrl] = useState(poster);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [showControls, setShowControls] = useState(true);
     const [showPlayAnim, setShowPlayAnim] = useState(false);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const controlsTimeoutRef = useRef(null);
-
-    // Optimized Background Thumbnail Generation (Free-Tier Friendly)
-    const generateThumbnail = useCallback(async () => {
-        if (!src || posterUrl) return;
-        try {
-            const cached = await get(`THUMB_V3_${src}`);
-            if (cached) {
-                setPosterUrl(cached);
-                return;
-            }
-        } catch (e) {}
-
-        const video = document.createElement('video');
-        video.crossOrigin = 'anonymous';
-        video.preload = 'metadata';
-        video.muted = true;
-        video.playsInline = true;
-
-        const cleanup = () => {
-            video.removeEventListener('loadeddata', onMetadata);
-            video.removeEventListener('seeked', onSeeked);
-            video.src = '';
-            video.load();
-        };
-
-        const onMetadata = () => {
-            video.currentTime = 0.5;
-        };
-
-        const onSeeked = () => {
-            try {
-                const canvas = document.createElement('canvas');
-                const targetWidth = 300;
-                const scale = targetWidth / video.videoWidth;
-                canvas.width = targetWidth;
-                canvas.height = video.videoHeight * scale;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-                setPosterUrl(dataUrl);
-                set(`THUMB_V3_${src}`, dataUrl).catch(() => {});
-            } catch (e) {}
-            cleanup();
-        };
-
-        video.addEventListener('loadeddata', onMetadata);
-        video.addEventListener('seeked', onSeeked);
-        video.src = src;
-    }, [src, posterUrl]);
-
-    // Active Pre-fetching (Only when user stops scrolling)
-    useEffect(() => {
-        if (!containerRef.current || posterUrl) return;
-        const observer = new IntersectionObserver(([entry]) => {
-            if (entry.isIntersecting) {
-                const timer = setTimeout(generateThumbnail, 500);
-                return () => clearTimeout(timer);
-            }
-        }, { rootMargin: '800px' });
-        observer.observe(containerRef.current);
-        return () => observer.disconnect();
-    }, [generateThumbnail, posterUrl]);
 
     const resetControlsTimeout = () => {
         setShowControls(true);

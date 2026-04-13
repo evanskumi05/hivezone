@@ -29,6 +29,8 @@ export default React.memo(function FeedPostCard({
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
+        if (!isMenuOpen) return;
+
         const handleClickOutside = (event) => {
             if (menuRef.current && !menuRef.current.contains(event.target)) {
                 setIsMenuOpen(false);
@@ -36,7 +38,7 @@ export default React.memo(function FeedPostCard({
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    }, [isMenuOpen]);
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
@@ -49,16 +51,16 @@ export default React.memo(function FeedPostCard({
     };
 
     return (
-        <div className="bg-white rounded-[1.5rem] shadow-sm border border-gray-100 p-4 sm:p-6 flex gap-4 mb-1">
+        <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-4 sm:p-6 flex gap-4 mb-2 will-change-transform">
             {/* Left: Avatar */}
             <Link
                 href={`/dashboard/profile/${post.author?.username || post.user_id}`}
-                className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-50 shrink-0 block rounded-full"
+                className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-50 shrink-0 block rounded-full overflow-hidden"
             >
                 <Avatar
                     src={post.author?.profile_picture}
                     name={post.author?.display_name || post.author?.first_name}
-                    className="w-full h-full rounded-full"
+                    className="w-full h-full object-cover"
                 />
             </Link>
 
@@ -76,12 +78,19 @@ export default React.memo(function FeedPostCard({
                     </div>
 
                     <div className="relative shrink-0">
-                        <button
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
-                        >
-                            <HugeiconsIcon icon={MoreHorizontalCircle01Icon} className="w-5 h-5" />
-                        </button>
+                        {post.is_ghost ? (
+                            <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-50 rounded-full border border-gray-100">
+                                <div className="w-1.5 h-1.5 bg-[#ffc107] rounded-full animate-pulse" />
+                                <span className="text-[12px] font-black text-gray-400 uppercase tracking-widest">Sending</span>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
+                            >
+                                <HugeiconsIcon icon={MoreHorizontalCircle01Icon} className="w-5 h-5" />
+                            </button>
+                        )}
 
                         {isMenuOpen && (
                             <div
@@ -122,10 +131,12 @@ export default React.memo(function FeedPostCard({
                 </Link>
 
                 {post.media_url && (
-                    <div className="relative w-full aspect-[4/5] sm:aspect-square md:aspect-[4/5] rounded-[1.2rem] overflow-hidden mt-2 cursor-pointer group/img bg-gray-100 shadow-sm border border-gray-100/50">
+                    <div className="relative w-full aspect-[4/5] rounded-[1.5rem] overflow-hidden mt-3 bg-gray-50 border border-gray-100 shadow-inner group/img">
+                        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 animate-pulse" />
                         {post.media_url.match(/\.(mp4|webm|ogg|mov|m4v|3gp|mkv)$/i) ? (
                             <AutoPauseVideo
                                 src={post.media_url}
+                                poster={post.thumbnail_url}
                                 onClick={() => showImage(post.media_url)}
                             />
                         ) : (
@@ -138,7 +149,7 @@ export default React.memo(function FeedPostCard({
                                 }}
                                 loading="lazy"
                                 decoding="async"
-                                className="w-full h-full object-cover group-hover/img:scale-[1.02] transition-transform duration-300"
+                                className="relative z-10 w-full h-full object-cover group-hover/img:scale-[1.03] transition-transform duration-500"
                             />
                         )}
                     </div>
