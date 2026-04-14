@@ -72,7 +72,9 @@ export function QueryProvider({ children }) {
  */
 export const saveProfileToDisk = (profile) => {
     if (typeof window === "undefined" || !profile) return;
-    localStorage.setItem("HIVEZONE_USER_IDENTITY", JSON.stringify(profile));
+    // Scrub sensitive data before persistence
+    const { email, ...scrubbed } = profile;
+    localStorage.setItem("HIVEZONE_USER_IDENTITY", JSON.stringify(scrubbed));
 };
 
 export const getProfileFromDisk = () => {

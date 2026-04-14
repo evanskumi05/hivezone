@@ -1,68 +1,57 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/client";
 import Avatar from "@/components/ui/Avatar";
 import { HugeiconsIcon } from "@hugeicons/react";
 import UserBadge from "@/components/ui/UserBadge";
 
 const RecentGigs = () => {
-    const [gigs, setGigs] = useState([]);
-    const [loading, setLoading] = useState(true);
     const supabase = createClient();
+    const staleTime = 1000 * 60 * 10; // 10 minutes
 
-    useEffect(() => {
-        const fetchRecentGigs = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                let userInstitution = null;
+    const { data: gigs = [], isLoading: loading } = useQuery({
+        queryKey: ['GIGS_RECENT'],
+        queryFn: async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return [];
 
-                if (session) {
-                    const { data: profileData } = await supabase
-                        .from("users")
-                        .select("school_id")
-                        .eq("id", session.user.id)
-                        .single();
-                    userInstitution = profileData?.school_id;
-                }
+            const { data: profileData } = await supabase
+                .from("users")
+                .select("school_id")
+                .eq("id", session.user.id)
+                .single();
 
-                if (!userInstitution) {
-                    setLoading(false);
-                    return;
-                }
+            const userInstitution = profileData?.school_id;
+            if (!userInstitution) return [];
 
-                const { data, error } = await supabase
-                    .from('gigs')
-                    .select(`
-                        *,
-                        author:users!inner (
-                            id,
-                            display_name,
-                            profile_picture,
-                            is_verified,
-                            is_admin,
-                            programme,
-                            year_of_study,
-                            username,
-                            school_id
-                        )
-                    `)
-                    .eq('school_id', userInstitution)
-                    .order('created_at', { ascending: false })
-                    .limit(2);
+            const { data, error } = await supabase
+                .from('gigs')
+                .select(`
+                    *,
+                    author:users!inner (
+                        id,
+                        display_name,
+                        profile_picture,
+                        is_verified,
+                        is_admin,
+                        programme,
+                        year_of_study,
+                        username,
+                        school_id
+                    )
+                `)
+                .eq('school_id', userInstitution)
+                .order('created_at', { ascending: false })
+                .limit(2);
 
-                if (error) throw error;
-                setGigs(data || []);
-            } catch (error) {
-                console.error("Error fetching recent gigs:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchRecentGigs();
-    }, [supabase]);
+            if (error) throw error;
+            return data || [];
+        },
+        staleTime
+    });
 
     return (
         <div className="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100 flex flex-col gap-4">

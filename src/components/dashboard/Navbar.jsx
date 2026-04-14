@@ -425,10 +425,6 @@ const Navbar = () => {
                                     <div className="h-px bg-gray-100 my-2 mx-2"></div>
                                 </>
                             )}
-
-                            <Link href="/dashboard/study-circles" onClick={() => setIsMobileSidebarOpen(false)} className="px-4 py-3.5 rounded-2xl hover:bg-gray-50 flex items-center gap-4">
-                                <span className="font-bold text-gray-900 text-[16px]">Study Circles</span>
-                            </Link>
                         </div>
 
                         {/* Footer (Logout) */}

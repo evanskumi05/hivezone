@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUI } from "@/components/ui/UIProvider";
 import { createClient } from "@/utils/supabase/client";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -43,6 +44,7 @@ function EditGigContent() {
     const searchParams = useSearchParams();
     const gid = searchParams.get("id");
     const supabase = createClient();
+    const queryClient = useQueryClient();
     const fileInputRef = useRef(null);
 
     const [loading, setLoading] = useState(true);
@@ -201,6 +203,11 @@ function EditGigContent() {
             // Logging removed for production
 
             if (updateError) throw updateError;
+            
+            // Invalidate caches
+            queryClient.invalidateQueries({ queryKey: ['GIGS_LIST'] });
+            queryClient.invalidateQueries({ queryKey: ['GIGS_RECENT'] });
+            queryClient.invalidateQueries({ queryKey: ['GIG_DETAIL', gid] });
 
             if (!updatedData || updatedData.length === 0) {
                 throw new Error("Failed to update: You may not have permission or the gig does not exist.");

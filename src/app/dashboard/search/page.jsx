@@ -260,11 +260,11 @@ function SearchResults() {
 
 
     return (
-        <div className="flex flex-col flex-1 min-h-0 h-full bg-[#fcf6de] md:bg-[#fcf6de] pt-4 md:pt-8 w-full">
-            <div className="max-w-4xl mx-auto w-full px-4 md:px-8">
+        <div className="flex flex-col flex-1 min-h-0 h-full bg-[#fcf6de] pt-4 md:pt-8 w-full">
+            <div className="max-w-4xl mx-auto w-full px-0 md:px-8">
 
                 {/* Mobile Search Bar */}
-                <div className="md:hidden mb-6">
+                <div className="md:hidden mb-6 px-4">
                     <form onSubmit={onLocalSearch} className="relative flex items-center">
                         <input
                             type="text"
@@ -280,7 +280,7 @@ function SearchResults() {
                 </div>
 
                 {/* Header */}
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4 px-4 md:px-0">
                     <div>
                         <h1 className="text-3xl font-black font-newyork text-gray-900 leading-none">
                             Search Results
@@ -292,7 +292,7 @@ function SearchResults() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-200 mb-6 sticky top-0 bg-[#fcf6de] z-40 pt-2 pb-0">
+                <div className="flex border-b border-gray-200 mb-6 sticky top-0 bg-[#fcf6de] z-40 pt-2 pb-0 px-4 md:px-0">
                     {['profiles', 'gigs', 'feeds'].map((tab) => (
                         <button
                             key={tab}
@@ -312,7 +312,7 @@ function SearchResults() {
                     onRefresh={() => handleSearch(localQuery.trim() || query.trim(), activeTab, profile?.school_id, true)}
                     className="flex-1"
                 >
-                    <div className="flex flex-col gap-4 min-h-[50vh]">
+                    <div className={`flex flex-col min-h-[50vh] ${activeTab === 'gigs' ? 'gap-4' : 'gap-0'}`}>
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20">
                             <div className="w-10 h-10 border-4 border-[#ffc107] border-t-transparent rounded-full animate-spin"></div>
@@ -321,12 +321,12 @@ function SearchResults() {
                     ) : results.length > 0 ? (
                         <>
                             {activeTab === 'profiles' && (
-                                <div className="flex flex-col gap-4">
+                                <div className="flex flex-col gap-0">
                                     {results.map((user) => (
                                         <Link
                                             href={user.id === currentUserId ? '/dashboard/profile' : `/dashboard/profile/${user.username || user.id}`}
                                             key={user.id}
-                                            className="bg-white p-4 rounded-3xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:border-[#ffc107] transition-all group active:scale-[0.98]"
+                                            className="px-4 py-4 border-b border-gray-100 flex items-center gap-4 hover:bg-[#fcf6de]/50 transition-all group active:scale-[0.98]"
                                         >
                                             <div className="shrink-0">
                                                 <Avatar
@@ -337,7 +337,7 @@ function SearchResults() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2">
-                                                    <h3 className="font-black text-gray-900 truncate">
+                                                    <h3 className="font-bold text-gray-900 truncate">
                                                         {user.computedName}
                                                     </h3>
                                                     <UserBadge isAdmin={user.is_admin} isVerified={user.is_verified} size="sm" />
@@ -358,7 +358,7 @@ function SearchResults() {
                             )}
 
                             {activeTab === 'gigs' && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12 px-4 md:px-0">
                                     {results.map((gig) => (
                                         <div
                                             key={gig.id}
@@ -445,7 +445,7 @@ function SearchResults() {
                             )}
 
                             {activeTab === 'feeds' && (
-                                <div className="flex flex-col gap-4 pb-12">
+                                <div className="flex flex-col gap-0 pb-12">
                                     {results.map((post) => (
                                         <FeedPostCard
                                             key={post.id}
@@ -461,7 +461,7 @@ function SearchResults() {
                             )}
                         </>
                     ) : query.trim() ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <div className="flex flex-col items-center justify-center py-20 text-center px-6">
                             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
                                 <HugeiconsIcon icon={Cancel01Icon} className="w-8 h-8 text-gray-300" strokeWidth={1.5} />
                             </div>

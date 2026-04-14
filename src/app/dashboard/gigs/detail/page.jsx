@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
 import Avatar from "@/components/ui/Avatar";
@@ -28,14 +29,15 @@ function GigDetailContent() {
     const searchParams = useSearchParams();
     const gid = searchParams.get("id");
     const supabase = createClient();
+    const queryClient = useQueryClient();
     const { confirmAction, showToast, openReportModal } = useUI();
     const menuRef = useRef(null);
 
-    const [gig, setGig] = useState(null);
-    const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState(null);
     const [showMenu, setShowMenu] = useState(false);
     const [imageError, setImageError] = useState(false);
+
+    const staleTime = 1000 * 60 * 10; // 10 minutes
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -48,46 +50,37 @@ function GigDetailContent() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    useEffect(() => {
-        if (!gid) return;
+    const { data: gig = null, isLoading: loading } = useQuery({
+        queryKey: ['GIG_DETAIL', gid],
+        queryFn: async () => {
+            if (!gid) return null;
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) setCurrentUserId(session.user.id);
 
-        const fetchGigDetails = async () => {
-            setLoading(true);
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session) setCurrentUserId(session.user.id);
+            const { data, error } = await supabase
+                .from('gigs')
+                .select(`
+                    *,
+                    author:users (
+                        id,
+                        display_name,
+                        profile_picture,
+                        is_verified,
+                        is_admin,
+                        programme,
+                        year_of_study,
+                        username
+                    )
+                `)
+                .eq('id', gid)
+                .single();
 
-                const { data, error } = await supabase
-                    .from('gigs')
-                    .select(`
-                        *,
-                        author:users (
-                            id,
-                            display_name,
-                            profile_picture,
-                            is_verified,
-                            is_admin,
-                            programme,
-                            year_of_study,
-                            username
-                        )
-                    `)
-                    .eq('id', gid)
-                    .single();
-
-                if (error) throw error;
-                setGig(data);
-            } catch (error) {
-                console.error("Error fetching gig:", error.message || error);
-                if (error.details) console.error("Error details:", error.details);
-                if (error.hint) console.error("Error hint:", error.hint);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchGigDetails();
-    }, [gid, supabase]);
+            if (error) throw error;
+            return data;
+        },
+        enabled: !!gid,
+        staleTime
+    });
 
     const handleDeleteGig = async () => {
         const confirmed = await confirmAction({
@@ -129,6 +122,10 @@ function GigDetailContent() {
                 .eq('user_id', currentUserId);
 
             if (deleteError) throw deleteError;
+
+            // Invalidate caches
+            queryClient.invalidateQueries({ queryKey: ['GIGS_LIST'] });
+            queryClient.invalidateQueries({ queryKey: ['GIGS_RECENT'] });
 
             showToast("Gig deleted successfully!", "success");
             router.push("/dashboard/gigs");

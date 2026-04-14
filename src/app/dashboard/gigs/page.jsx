@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/client";
 import Avatar from "@/components/ui/Avatar";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -45,85 +46,70 @@ const SORT_OPTIONS = [
 
 export default function GigsPage() {
     const router = useRouter();
-    const [searchQuery, setSearchQuery] = useState("");
-    const [gigs, setGigs] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState(null);
     const [activeCategory, setActiveCategory] = useState("All Categories");
     const [sortOrder, setSortOrder] = useState("Latest");
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
     const supabase = createClient();
+    const staleTime = 1000 * 60 * 10; // 10 minutes
 
-    useEffect(() => {
-        const fetchGigs = async () => {
-            setLoading(true);
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                let userInstitution = null;
+    const { data: gigs = [], isLoading: loading } = useQuery({
+        queryKey: ['GIGS_LIST', activeCategory, sortOrder],
+        queryFn: async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            let userInstitution = null;
 
-                if (session) {
-                    setCurrentUserId(session.user.id);
-                    const { data: profileData } = await supabase
-                        .from("users")
-                        .select("school_id")
-                        .eq("id", session.user.id)
-                        .single();
-                    userInstitution = profileData?.school_id;
-                }
-
-                if (!userInstitution) {
-                    setLoading(false);
-                    return;
-                }
-
-                let query = supabase
-                    .from('gigs')
-                    .select(`
-                        *,
-                        author:users!inner (
-                            id,
-                            display_name,
-                            profile_picture,
-                            is_verified,
-                            is_admin,
-                            programme,
-                            year_of_study,
-                            username,
-                            school_id
-                        )
-                    `)
-                    .eq('school_id', userInstitution);
-
-                if (activeCategory !== "All Categories") {
-                    const dbSlug = categoryMap[activeCategory];
-                    if (dbSlug) {
-                        query = query.eq('category', dbSlug);
-                    }
-                }
-
-                if (sortOrder === "Price: Low to High") {
-                    query = query.order('price', { ascending: true });
-                } else if (sortOrder === "Price: High to Low") {
-                    query = query.order('price', { ascending: false });
-                } else {
-                    query = query.order('created_at', { ascending: false });
-                }
-
-                const { data, error } = await query;
-
-                if (error) throw error;
-                setGigs(data || []);
-            } catch (error) {
-                console.error("Error fetching gigs:", error.message || error);
-                if (error.details) console.error("Error details:", error.details);
-                if (error.hint) console.error("Error hint:", error.hint);
-            } finally {
-                setLoading(false);
+            if (session) {
+                setCurrentUserId(session.user.id);
+                const { data: profileData } = await supabase
+                    .from("users")
+                    .select("school_id")
+                    .eq("id", session.user.id)
+                    .single();
+                userInstitution = profileData?.school_id;
             }
-        };
 
-        fetchGigs();
-    }, [supabase, activeCategory, sortOrder]);
+            if (!userInstitution) return [];
+
+            let query = supabase
+                .from('gigs')
+                .select(`
+                    *,
+                    author:users!inner (
+                        id,
+                        display_name,
+                        profile_picture,
+                        is_verified,
+                        is_admin,
+                        programme,
+                        year_of_study,
+                        username,
+                        school_id
+                    )
+                `)
+                .eq('school_id', userInstitution);
+
+            if (activeCategory !== "All Categories") {
+                const dbSlug = categoryMap[activeCategory];
+                if (dbSlug) {
+                    query = query.eq('category', dbSlug);
+                }
+            }
+
+            if (sortOrder === "Price: Low to High") {
+                query = query.order('price', { ascending: true });
+            } else if (sortOrder === "Price: High to Low") {
+                query = query.order('price', { ascending: false });
+            } else {
+                query = query.order('created_at', { ascending: false });
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+            return data || [];
+        },
+        staleTime
+    });
 
     return (
         <div className="flex flex-col min-h-full bg-[#fcf6de] p-4 sm:p-8 pt-0 gap-6 max-w-[1200px] mx-auto w-full">

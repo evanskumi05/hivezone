@@ -66,10 +66,10 @@ const MobileNotificationsPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#fcf6de] px-4 md:hidden pb-20">
-            <div className="flex items-center justify-between mt-4 mb-6">
+        <div className="min-h-screen bg-[#fcf6de] px-0 md:hidden pb-20">
+            <div className="flex items-center justify-between mt-4 mb-6 px-4">
                 <h1 className="text-2xl font-black font-newyork text-gray-900 tracking-tight">Notifications</h1>
-                <div className="flex gap-4">
+                <div className="flex gap-4 px-4">
                     {notifications.length > 0 && (
                         <button
                             onClick={handleClearAll}
@@ -89,7 +89,7 @@ const MobileNotificationsPage = () => {
                 </div>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-0 border-t border-gray-100">
                 {loading ? (
                     <div className="flex justify-center py-10">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ffc107]"></div>
@@ -100,7 +100,7 @@ const MobileNotificationsPage = () => {
                     <div
                         key={notif.id}
                         onClick={() => handleNotificationClick(notif)}
-                        className={`flex items-start gap-4 p-4 bg-white rounded-[1.25rem] shadow-sm border ${notif.is_read ? 'border-gray-100' : 'border-[#ffc107]/50 bg-[#ffc107]/5'} cursor-pointer active:scale-[0.98] transition-all group relative`}
+                        className={`flex items-start gap-4 p-4 border-b border-gray-100 cursor-pointer active:scale-[0.98] transition-all group relative ${notif.is_read ? 'bg-transparent' : 'bg-[#ffc107]/5'}`}
                     >
                         <div className="shrink-0">
                             <Avatar

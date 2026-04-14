@@ -171,7 +171,7 @@ export default React.memo(function AutoPauseVideo({ src, poster, className, onCl
     return (
         <div
             ref={containerRef}
-            className={`w-full h-full relative group cursor-pointer flex items-center justify-center transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-[9999] bg-black' : 'rounded-[1.2rem] overflow-hidden bg-gray-100'}`}
+            className={`w-full h-full relative group cursor-pointer flex items-center justify-center transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-[9999] bg-black' : 'rounded-[inherit] overflow-hidden bg-gray-100'}`}
             onClick={togglePlay}
             onMouseMove={resetControlsTimeout}
         >

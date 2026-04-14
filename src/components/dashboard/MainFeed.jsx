@@ -113,9 +113,9 @@ const PostComposer = React.memo(({ profile, onPost, isPosting }) => {
 PostComposer.displayName = "PostComposer";
 
 const FeedListHeader = React.memo(({ profile, activeTab, onTabChange, isLoading, hasNoPosts, onPost, isPosting }) => (
-    <div className="flex flex-col gap-4 w-full bg-[#fcf6de] pb-2">
+    <div className="flex flex-col gap-4 w-full bg-[#fcf6de] pb-2 px-4 sm:px-0">
         <div className="mb-4">
-            <WelcomeBanner firstName={profile?.first_name} email={profile?.email} />
+            <WelcomeBanner firstName={profile?.first_name} />
         </div>
         <div className="flex items-center justify-between mt-4 mb-0">
             <h2 className="text-2xl sm:text-3xl font-black tracking-wide font-newyork text-gray-900 leading-none">Campus Feed</h2>
@@ -398,7 +398,7 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
                 context={virtuosoContext}
                 components={{ Header: VirtuosoHeader, Footer: VirtuosoFooter }}
                 itemContent={(idx, post) => (
-                    <div className="pb-3 px-0.5">
+                    <div className="pb-0 px-0">
                         <FeedPostCard post={post} profile={profile} onDelete={handleDeletePost} onReport={handleReportPost} onLike={handleLike} />
                     </div>
                 )}

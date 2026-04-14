@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUI } from "@/components/ui/UIProvider";
 import { createClient } from "@/utils/supabase/client";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -31,6 +32,7 @@ const categoryMap = {
 export default function PostGigPage() {
     const { showToast } = useUI();
     const router = useRouter();
+    const queryClient = useQueryClient();
     const supabase = createClient();
     const fileInputRef = useRef(null);
 
@@ -125,6 +127,10 @@ export default function PostGigPage() {
                 .insert([gigData]);
 
             if (insertError) throw insertError;
+            
+            // Invalidate caches
+            queryClient.invalidateQueries({ queryKey: ['GIGS_LIST'] });
+            queryClient.invalidateQueries({ queryKey: ['GIGS_RECENT'] });
 
             showToast("Gig published successfully!", "success");
             router.push("/dashboard/gigs");

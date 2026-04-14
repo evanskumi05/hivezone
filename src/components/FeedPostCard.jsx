@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
     MoreHorizontalCircle01Icon,
@@ -24,6 +25,7 @@ export default React.memo(function FeedPostCard({
     onReport,
     onLike
 }) {
+    const router = useRouter();
     const { showImage } = useUI();
     const menuRef = useRef(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -51,10 +53,14 @@ export default React.memo(function FeedPostCard({
     };
 
     return (
-        <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-4 sm:p-6 flex gap-4 mb-2 will-change-transform">
+        <div 
+            onClick={() => router.push(`/dashboard/feed/${post.id}`)}
+            className="bg-[#fcf6de] border-b border-gray-200/60 p-4 sm:p-6 flex gap-4 will-change-transform cursor-pointer group/card hover:bg-[#fcf6de]/50 transition-colors"
+        >
             {/* Left: Avatar */}
             <Link
                 href={`/dashboard/profile/${post.author?.username || post.user_id}`}
+                onClick={(e) => e.stopPropagation()}
                 className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-50 shrink-0 block rounded-full overflow-hidden"
             >
                 <Avatar
@@ -68,7 +74,11 @@ export default React.memo(function FeedPostCard({
             <div className="flex-1 flex flex-col gap-2 min-w-0">
                 <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-x-2 gap-y-1 flex-wrap min-w-0">
-                        <Link href={`/dashboard/feed/${post.id}`} className="font-bold text-gray-900 text-[17px] hover:text-[#ffc107] transition-colors truncate">
+                        <Link 
+                            href={`/dashboard/profile/${post.author?.username || post.user_id}`} 
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-bold text-gray-900 text-[17px] hover:text-[#ffc107] transition-colors truncate"
+                        >
                             {post.author?.display_name || post.author?.first_name}
                         </Link>
                         <UserBadge isAdmin={post.author?.is_admin} isVerified={post.author?.is_verified} />
@@ -85,7 +95,7 @@ export default React.memo(function FeedPostCard({
                             </div>
                         ) : (
                             <button
-                                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
                                 className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
                             >
                                 <HugeiconsIcon icon={MoreHorizontalCircle01Icon} className="w-5 h-5" />
@@ -99,7 +109,7 @@ export default React.memo(function FeedPostCard({
                             >
                                 {profile?.id === post.user_id ? (
                                     <button
-                                        onClick={() => { setIsMenuOpen(false); onDelete(post.id, post.media_url); }}
+                                        onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onDelete(post.id, post.media_url); }}
                                         className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50"
                                     >
                                         <HugeiconsIcon icon={Delete02Icon} className="w-4 h-4" />
@@ -107,7 +117,7 @@ export default React.memo(function FeedPostCard({
                                     </button>
                                 ) : (
                                     <button
-                                        onClick={() => { setIsMenuOpen(false); onReport(post); }}
+                                        onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onReport(post); }}
                                         className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50"
                                     >
                                         <HugeiconsIcon icon={Alert01Icon} className="w-4 h-4" />
@@ -137,18 +147,16 @@ export default React.memo(function FeedPostCard({
                             <AutoPauseVideo
                                 src={post.media_url}
                                 poster={post.thumbnail_url}
-                                onClick={() => showImage(post.media_url)}
+                                onClick={(e) => { e.stopPropagation(); showImage(post.media_url); }}
                             />
                         ) : (
                             <img
                                 src={feedImageUrl(post.media_url)}
                                 alt="Post media"
-                                onClick={() => showImage(fullImageUrl(post.media_url))}
+                                onClick={(e) => { e.stopPropagation(); showImage(fullImageUrl(post.media_url)); }}
                                 onError={(e) => {
                                     if (e.target.src !== post.media_url) e.target.src = post.media_url;
                                 }}
-                                loading="lazy"
-                                decoding="async"
                                 className="relative z-10 w-full h-full object-cover group-hover/img:scale-[1.03] transition-transform duration-500"
                             />
                         )}
@@ -157,7 +165,7 @@ export default React.memo(function FeedPostCard({
 
                 <div className="flex items-center gap-8 mt-4 pt-4 border-t border-gray-50">
                     <button
-                        onClick={() => onLike(post)}
+                        onClick={(e) => { e.stopPropagation(); onLike(post); }}
                         className={`flex items-center gap-2 group ${post.is_liked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
                     >
                         <div className="w-9 h-9 flex items-center justify-center rounded-full group-hover:bg-red-50 transition-colors">
@@ -171,6 +179,7 @@ export default React.memo(function FeedPostCard({
 
                     <Link
                         href={`/dashboard/feed/${post.id}`}
+                        onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-2 group text-gray-500 hover:text-amber-500"
                     >
                         <div className="w-9 h-9 flex items-center justify-center rounded-full group-hover:bg-amber-50 transition-colors">

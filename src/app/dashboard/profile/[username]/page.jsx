@@ -272,10 +272,9 @@ export default function PublicProfilePage() {
                         </div>
 
                         {/* Profile Section */}
-                        <div className="relative px-4 sm:px-8 md:px-12 pb-12 flex-1">
-
+                        <div className="relative pb-12 flex-1">
                             {/* Avatar overlapping cover */}
-                            <div className="absolute -top-10 sm:-top-16 left-4 sm:left-8 md:left-12 z-30">
+                            <div className="absolute -top-10 sm:-top-16 left-4 sm:left-8 md:left-12 z-30 px-4 sm:px-8 md:px-12">
                                 <div
                                     className="w-[84px] h-[84px] sm:w-[120px] sm:h-[120px] md:w-[140px] md:h-[140px] rounded-full border-[4px] md:border-[6px] border-white md:border-[#f4f4f4] overflow-hidden bg-gray-200 shadow-sm relative cursor-pointer hover:scale-105 transition-transform duration-300 active:scale-95"
                                     onClick={() => showImage(profile?.profile_picture)}
@@ -289,7 +288,7 @@ export default function PublicProfilePage() {
                             </div>
 
                             {/* Top row: Message + Report buttons */}
-                            <div className="w-full flex justify-end items-center gap-2 pt-3 md:pt-6">
+                            <div className="w-full flex justify-end items-center gap-2 pt-3 md:pt-6 px-4 sm:px-8 md:px-12">
                                 <button
                                     onClick={() => {
                                         router.push(`/dashboard/chat/new?user=${profile.id}`);
@@ -308,7 +307,7 @@ export default function PublicProfilePage() {
                             </div>
 
                             {/* Main Grid: Info + Banner on Left, Skills+Links on Right */}
-                            <div className="mt-2 md:mt-2 grid grid-cols-1 md:grid-cols-[1fr_300px] gap-8 md:gap-16 lg:gap-32 w-full max-w-5xl relative z-10">
+                            <div className="mt-2 md:mt-2 grid grid-cols-1 md:grid-cols-[1fr_300px] gap-8 md:gap-16 lg:gap-32 w-full max-w-5xl relative z-10 px-4 sm:px-8 md:px-12">
 
                                 {/* Left Column (Info) */}
                                 <div className="flex flex-col mt-2 md:mt-0">
@@ -379,7 +378,7 @@ export default function PublicProfilePage() {
                             </div>
 
                             {/* Tabs Switcher */}
-                            <div className="mt-12 border-b border-gray-100 flex items-center gap-8 px-2 overflow-x-auto scrollbar-hide">
+                            <div className="mt-12 border-b border-gray-100 flex items-center gap-8 px-4 sm:px-8 md:px-12 overflow-x-auto scrollbar-hide">
                                 <button
                                     onClick={() => setActiveTab("posts")}
                                     className={`pb-3 px-1 font-black text-[15px] transition-all relative shrink-0 ${activeTab === "posts" ? "text-gray-900" : "text-gray-400 hover:text-gray-600"}`}
@@ -397,13 +396,13 @@ export default function PublicProfilePage() {
                             </div>
 
                             {/* Tab Content */}
-                            <div className="mt-8">
+                            <div className="mt-0">
                                 {loadingContent ? (
                                     <div className="flex justify-center py-12">
                                         <div className="w-8 h-8 border-4 border-[#ffc107] border-t-transparent rounded-full animate-spin" />
                                     </div>
                                 ) : activeTab === "posts" ? (
-                                    <div className="space-y-4">
+                                    <div className="flex flex-col">
                                         {userPosts.length > 0 ? (
                                             userPosts.map(post => (
                                                 <FeedPostCard
@@ -421,7 +420,7 @@ export default function PublicProfilePage() {
                                         )}
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 sm:px-8 md:px-12 mt-8">
                                         {userGigs.length > 0 ? (
                                             userGigs.map(gig => (
                                                 <Link

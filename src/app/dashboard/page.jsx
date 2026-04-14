@@ -28,7 +28,7 @@ export default function DashboardPage() {
             
             const { data: profileData } = await supabase
                 .from("users")
-                .select("id, first_name, email, institution, school_id, profile_picture")
+                .select("id, first_name, institution, school_id, profile_picture")
                 .eq("id", session.user.id)
                 .single();
             
@@ -37,7 +37,7 @@ export default function DashboardPage() {
             }
             return profileData;
         },
-        staleTime: 1000 * 60 * 60 * 24, // 24 Hours (Name/Email doesn't change often)
+        staleTime: 1000 * 60 * 60 * 24, 
     });
 
     const handleRefresh = async () => {
@@ -47,7 +47,7 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="flex h-full bg-[#fcf6de] p-3 sm:p-5 pt-0 gap-6 max-w-[1600px] mx-auto w-full overflow-hidden">
+        <div className="flex h-full bg-[#fcf6de] px-0 sm:px-5 pt-0 gap-6 max-w-[1600px] mx-auto w-full overflow-hidden">
             {/* Sidebar Column */}
             <div className="shrink-0 flex-col hidden lg:flex h-full pt-4">
                 <Sidebar />

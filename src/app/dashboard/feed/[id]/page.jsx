@@ -73,10 +73,10 @@ const Comment = ({ comment, allComments, depth = 0, setReplyingTo, setReplyConte
                 <div className="flex-1 min-w-0 flex flex-col gap-1.5 pt-0.5">
                     <div className="flex items-center gap-2 flex-wrap min-w-0">
                         <span className="font-bold text-gray-900 text-[15px] truncate">{comment.author?.display_name}</span>
-                        <UserBadge 
-                            isAdmin={comment.author?.is_admin} 
-                            isVerified={comment.author?.is_verified} 
-                            size="sm" 
+                        <UserBadge
+                            isAdmin={comment.author?.is_admin}
+                            isVerified={comment.author?.is_verified}
+                            size="sm"
                         />
                         <div className="flex items-center gap-1 shrink-0">
                             <span className="text-gray-500 text-[14px]">@{comment.author?.username}</span>
@@ -122,11 +122,11 @@ const Comment = ({ comment, allComments, depth = 0, setReplyingTo, setReplyConte
             {childComments.length > 0 && (
                 <div className={`${depth === 0 ? "ml-[19px] sm:ml-[23px] border-l-2 border-gray-200/60 pl-4 sm:pl-6" : "ml-0"} flex flex-col`}>
                     {currentReplies.map(child => (
-                        <Comment 
-                            key={child.id} 
-                            comment={child} 
-                            allComments={allComments} 
-                            depth={depth + 1} 
+                        <Comment
+                            key={child.id}
+                            comment={child}
+                            allComments={allComments}
+                            depth={depth + 1}
                             setReplyingTo={setReplyingTo}
                             setReplyContext={setReplyContext}
                             replyInputRef={replyInputRef}
@@ -139,15 +139,15 @@ const Comment = ({ comment, allComments, depth = 0, setReplyingTo, setReplyConte
                     {/* Local pagination button for replies */}
                     {hasMoreReplies && (
                         <div className="mt-4 mb-2">
-                            <button 
+                            <button
                                 onClick={() => setVisibleRepliesCount(prev => prev === 0 ? 2 : prev + 2)}
                                 className="flex items-center gap-2 group/more"
                             >
                                 <div className="w-6 sm:w-8 h-[2px] bg-gray-100 group-hover/more:bg-[#ffc107]/30 transition-colors" />
                                 <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest group-hover/more:text-[#ffc107] transition-colors">
-                                    {visibleRepliesCount === 0 
-                                      ? `Show ${childComments.length} ${childComments.length === 1 ? 'reply' : 'replies'}`
-                                      : `Show ${childComments.length - visibleRepliesCount} more ${childComments.length - visibleRepliesCount === 1 ? 'reply' : 'replies'}`
+                                    {visibleRepliesCount === 0
+                                        ? `Show ${childComments.length} ${childComments.length === 1 ? 'reply' : 'replies'}`
+                                        : `Show ${childComments.length - visibleRepliesCount} more ${childComments.length - visibleRepliesCount === 1 ? 'reply' : 'replies'}`
                                     }
                                 </span>
                             </button>
@@ -527,7 +527,7 @@ export default function FeedDetailPage() {
     if (loading) return (
         <div className="max-w-[800px] mx-auto w-full p-3 sm:p-8 pt-0 min-h-screen bg-[#fcf6de]">
             <div className="flex items-center gap-4 mt-4 sm:mt-8 mb-4 sm:mb-6">
-                 <button onClick={() => router.back()} className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center">
+                <button onClick={() => router.back()} className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center">
                     <HugeiconsIcon icon={ArrowLeft01Icon} className="w-5 h-5 text-gray-700" />
                 </button>
                 <h1 className="text-xl sm:text-2xl font-black font-newyork">Post</h1>
@@ -548,9 +548,9 @@ export default function FeedDetailPage() {
     return (
         <div className="min-h-screen bg-[#fcf6de] pb-52 sm:pb-64 selection:bg-[#ffc107]/30">
             <style>{heartPop}</style>
-            <div className="max-w-[700px] mx-auto w-full p-3 sm:p-8 pt-0">
+            <div className="max-w-[700px] mx-auto w-full px-0 sm:px-8 pt-0">
                 {/* Header */}
-                <div className="flex items-center gap-4 mt-4 sm:mt-6 mb-3 sm:mb-4 sticky top-0 py-2 bg-[#fcf6de]/95 backdrop-blur z-20">
+                <div className="flex items-center gap-4 mt-4 sm:mt-6 mb-3 sm:mb-4 sticky top-0 py-2 bg-[#fcf6de]/95 backdrop-blur z-20 px-4 sm:px-0">
                     <button
                         onClick={() => router.back()}
                         className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 transition-all shadow-sm active:scale-90"
@@ -561,7 +561,7 @@ export default function FeedDetailPage() {
                 </div>
 
                 {/* Main Post Content */}
-                <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                <div className="bg-[#fcf6de] border-b border-gray-100 p-4 sm:p-6 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-1000">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                             <Link href={`/dashboard/profile/${post.author?.username}`}>
@@ -574,9 +574,9 @@ export default function FeedDetailPage() {
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-1.5">
                                     <span className="font-bold text-gray-900 text-[15px] tracking-tight">{post.author?.display_name}</span>
-                                    <UserBadge 
-                                        isAdmin={post.author?.is_admin} 
-                                        isVerified={post.author?.is_verified} 
+                                    <UserBadge
+                                        isAdmin={post.author?.is_admin}
+                                        isVerified={post.author?.is_verified}
                                         size="sm"
                                     />
                                 </div>
@@ -613,41 +613,49 @@ export default function FeedDetailPage() {
                     </div>
 
                     {post.media_url && (
-                        <div className="relative mt-4 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group/media">
-                            {post.media_url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
-                                <AutoPauseVideo src={post.media_url} className="w-full max-h-[600px] object-contain transition-transform duration-700 group-hover/media:scale-[1.01]" onClick={() => showImage(post.media_url)} />
+                        <div className="relative mt-4 aspect-[4/5] rounded-[1.5rem] overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group/media">
+                            {post.media_url.match(/\.(mp4|webm|ogg|mov|m4v|3gp|mkv)$/i) ? (
+                                <AutoPauseVideo 
+                                    src={post.media_url} 
+                                    poster={post.thumbnail_url}
+                                    className="w-full h-full transition-transform duration-700 group-hover/media:scale-[1.01]" 
+                                />
                             ) : (
-                                <img src={feedImageUrl(post.media_url)} alt="Media" loading="lazy" decoding="async" className="w-full h-full max-h-[700px] object-cover transition-transform duration-700 group-hover/media:scale-[1.01]" onClick={() => showImage(fullImageUrl(post.media_url))} />
+                                <img 
+                                    src={feedImageUrl(post.media_url)} 
+                                    alt="Media" 
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover/media:scale-[1.01]" 
+                                    onClick={() => showImage(fullImageUrl(post.media_url))} 
+                                />
                             )}
                         </div>
                     )}
 
-                    <div className="mt-5 py-3 border-y border-gray-50 flex items-center gap-8">
-                        <div className="flex items-center gap-2 group cursor-pointer" onClick={handleLike}>
-                            <span className="font-extrabold text-gray-900 text-base">{post.likes_count}</span>
-                            <span className="text-gray-500 font-bold tracking-wide uppercase text-xs group-hover:text-red-500 transition-colors">Likes</span>
-                        </div>
-                        <div className="flex items-center gap-2 group cursor-pointer">
-                            <span className="font-extrabold text-gray-900 text-base">{post.comments_count}</span>
-                            <span className="text-gray-500 font-bold tracking-wide uppercase text-xs group-hover:text-[#ffc107] transition-colors">Comments</span>
-                        </div>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-around px-4">
+                    <div className="mt-5 pt-4 border-t border-gray-100 flex items-center gap-8 sm:px-4">
                         <button
                             onClick={handleLike}
-                            className={`flex items-center gap-2 group p-2 rounded-full transition-all hover:bg-red-50 ${post.is_liked ? "text-red-500" : "text-gray-400 hover:text-red-500"}`}
+                            className={`flex items-center gap-2 group ${post.is_liked ? "text-red-500" : "text-gray-500 hover:text-red-500"}`}
                         >
-                            <HugeiconsIcon icon={FavouriteIcon} className={`w-6 h-6 transition-all duration-300 ${post.is_liked ? "fill-current animate-heart-pop" : "group-hover:scale-110"}`} />
+                            <div className="w-10 h-10 flex items-center justify-center rounded-full group-hover:bg-red-50 transition-colors">
+                                <HugeiconsIcon
+                                    icon={FavouriteIcon}
+                                    className={`w-6 h-6 transition-all duration-300 ${post.is_liked ? "fill-current animate-heart-pop" : "group-hover:scale-110"}`}
+                                />
+                            </div>
+                            <span className="text-[15px] font-bold">{post.likes_count || 0}</span>
                         </button>
+
                         <button
                             onClick={() => {
                                 setReplyingTo('root');
                                 document.getElementById('root-reply-input')?.focus();
                             }}
-                            className="flex items-center gap-2 group p-2 rounded-full transition-all text-gray-400 hover:text-[#ffc107] hover:bg-amber-50"
+                            className="flex items-center gap-2 group text-gray-500 hover:text-amber-500"
                         >
-                            <HugeiconsIcon icon={Comment01Icon} className="w-6 h-6 transition-transform duration-300 group-hover:scale-110" />
+                            <div className="w-10 h-10 flex items-center justify-center rounded-full group-hover:bg-amber-50 transition-colors">
+                                <HugeiconsIcon icon={Comment01Icon} className="w-6 h-6 transition-transform duration-300 group-hover:scale-110" />
+                            </div>
+                            <span className="text-[15px] font-bold">{post.comments_count || 0}</span>
                         </button>
                     </div>
                 </div>
@@ -655,14 +663,14 @@ export default function FeedDetailPage() {
                 {/* Fixed Bottom Reply Bar Container */}
                 <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 pb-safe bg-gradient-to-t from-[#fcf6de] via-[#fcf6de] to-transparent z-40">
                     <div className="max-w-[700px] mx-auto">
-                        
+
                         {/* Reply Context Indicator */}
                         {replyContext && (
                             <div className={`mb-2 flex items-center justify-between bg-white/50 backdrop-blur px-4 py-1.5 rounded-t-xl border-x border-t border-gray-100/50 animate-in slide-in-from-bottom-2 duration-300`}>
                                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                                     Replying to <span className="text-gray-900">@{replyContext.username}</span>
                                 </span>
-                                <button 
+                                <button
                                     onClick={() => {
                                         setReplyingTo(null);
                                         setReplyContext(null);
@@ -710,10 +718,10 @@ export default function FeedDetailPage() {
                 <div className="mt-2 divide-y divide-gray-100 pb-40">
                     {rootComments.length > 0 ? (
                         rootComments.map(comment => (
-                            <Comment 
-                                key={comment.id} 
-                                comment={comment} 
-                                allComments={comments} 
+                            <Comment
+                                key={comment.id}
+                                comment={comment}
+                                allComments={comments}
                                 setReplyingTo={setReplyingTo}
                                 setReplyContext={setReplyContext}
                                 replyInputRef={replyInputRef}
