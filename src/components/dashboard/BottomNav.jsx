@@ -7,7 +7,7 @@ import {
     Home01Icon,
     Briefcase02Icon,
     Search01Icon,
-    UserGroupIcon,
+    BrainIcon,
     BubbleChatIcon,
 } from "@hugeicons/core-free-icons";
 import { useChatConfig } from "@/components/providers/ChatProvider";
@@ -37,10 +37,10 @@ const BottomNav = () => {
             isActive: pathname.startsWith("/dashboard/gigs"),
         },
         {
-            name: "Communities",
-            href: "/dashboard/communities",
-            icon: UserGroupIcon,
-            isActive: pathname.startsWith("/dashboard/communities"),
+            name: "Mental Alleviation",
+            href: "/dashboard/mental-alleviation",
+            icon: BrainIcon,
+            isActive: pathname.startsWith("/dashboard/mental-alleviation"),
         },
         {
             name: "Messages",

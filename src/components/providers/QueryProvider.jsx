@@ -11,9 +11,9 @@ import { get, set, del, keys } from "idb-keyval";
 const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
-            staleTime: 1000 * 60, // Default 1 minute
-            gcTime: 1000 * 60 * 60 * 24,
-            retry: 2,
+            staleTime: 1000 * 60 * 2, // Optimized: 2 minutes to reduce background noise
+            gcTime: 1000 * 60 * 60 * 24, // 24 Hours
+            retry: 1, // Only retry once for faster failure feedback
             refetchOnWindowFocus: false,
         },
     },

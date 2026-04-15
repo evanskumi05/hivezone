@@ -153,6 +153,7 @@ export default React.memo(function FeedPostCard({
                             <img
                                 src={feedImageUrl(post.media_url)}
                                 alt="Post media"
+                                loading="lazy"
                                 onClick={(e) => { e.stopPropagation(); showImage(fullImageUrl(post.media_url)); }}
                                 onError={(e) => {
                                     if (e.target.src !== post.media_url) e.target.src = post.media_url;
@@ -163,12 +164,12 @@ export default React.memo(function FeedPostCard({
                     </div>
                 )}
 
-                <div className="flex items-center gap-8 mt-4 pt-4 border-t border-gray-50">
+                <div className="flex items-center gap-8 mt-2">
                     <button
                         onClick={(e) => { e.stopPropagation(); onLike(post); }}
-                        className={`flex items-center gap-2 group ${post.is_liked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
+                        className={`flex items-center gap-0.5 group ${post.is_liked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
                     >
-                        <div className="w-9 h-9 flex items-center justify-center rounded-full group-hover:bg-red-50 transition-colors">
+                        <div className="w-8 h-8 flex items-center justify-center rounded-full group-hover:bg-red-50 transition-colors">
                             <HugeiconsIcon
                                 icon={FavouriteIcon}
                                 className={`w-5 h-5 ${post.is_liked ? 'fill-current' : ''}`}
@@ -180,9 +181,9 @@ export default React.memo(function FeedPostCard({
                     <Link
                         href={`/dashboard/feed/${post.id}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-2 group text-gray-500 hover:text-amber-500"
+                        className="flex items-center gap-0.5 group text-gray-500 hover:text-amber-500"
                     >
-                        <div className="w-9 h-9 flex items-center justify-center rounded-full group-hover:bg-amber-50 transition-colors">
+                        <div className="w-8 h-8 flex items-center justify-center rounded-full group-hover:bg-amber-50 transition-colors">
                             <HugeiconsIcon icon={Comment01Icon} className="w-5 h-5" />
                         </div>
                         <span className="text-[14px] font-bold">{post.comments_count || 0}</span>

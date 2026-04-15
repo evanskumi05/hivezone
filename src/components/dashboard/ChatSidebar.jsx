@@ -32,7 +32,15 @@ export default function ChatSidebar({ activeId }) {
             <div className="flex-1 overflow-y-auto pb-20 md:pb-4">
                 {/* Header */}
                 <div className="p-6 pb-2">
-                    <h1 className="text-2xl font-black font-newyork text-gray-900 tracking-tight mb-6">Messages</h1>
+                    <div className="flex items-center justify-between mb-6">
+                        <h1 className="text-2xl font-black font-newyork text-gray-900 tracking-tight">Messages</h1>
+                        <Link 
+                            href="/dashboard/study-circles"
+                            className="text-[11px] font-black uppercase tracking-widest text-[#ffc107] bg-[#ffc107]/10 px-3 py-1.5 rounded-full hover:bg-[#ffc107]/20 transition-all active:scale-95"
+                        >
+                            Study Circles
+                        </Link>
+                    </div>
                     <div className="relative mb-4">
                         <HugeiconsIcon icon={Search01Icon} size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input

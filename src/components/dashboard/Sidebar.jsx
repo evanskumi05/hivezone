@@ -17,8 +17,11 @@ const Sidebar = () => {
                         <span className="font-medium text-gray-800">Campus Gigs</span>
                     </Link>
 
-                    <Link href="/dashboard/communities" className="flex items-center justify-center py-4 px-6 rounded-full border border-[#ffc107] bg-white hover:bg-[#ffc107]/10 transition">
-                        <span className="font-medium text-gray-800">Communities</span>
+                    <Link href="/dashboard/study-circles" className="flex items-center justify-center py-4 px-6 rounded-full border border-[#ffc107] bg-white hover:bg-[#ffc107]/10 transition">
+                        <span className="font-medium text-gray-800">Study Circles</span>
+                    </Link>
+                    <Link href="/dashboard/mental-alleviation" className="flex items-center justify-center py-4 px-6 rounded-full border border-[#ffc107] bg-white hover:bg-[#ffc107]/10 transition">
+                        <span className="font-medium text-gray-800">Mental Alleviation</span>
                     </Link>
                 </div>
 
