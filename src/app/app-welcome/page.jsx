@@ -94,9 +94,9 @@ export default function AppWelcomePage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F5F1E5] flex flex-col relative overflow-hidden font-sans touch-none">
+        <div className="h-[100dvh] bg-[#F5F1E5] flex flex-col relative overflow-hidden font-sans touch-none text-gray-900">
             {/* Top Bar */}
-            <div className="flex justify-end p-6 z-20">
+            <div className="flex justify-end p-4 sm:p-6 z-20 shrink-0">
                 <button 
                     onClick={handleSkip}
                     className="flex items-center gap-2 text-gray-800 font-bold hover:opacity-70 transition-opacity px-2 py-2 rounded-full active:scale-95 group"
@@ -111,7 +111,7 @@ export default function AppWelcomePage() {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 flex flex-col items-center px-6 relative pt-4 overflow-hidden">
+            <div className="flex-1 flex flex-col items-center px-4 sm:px-6 relative overflow-hidden min-h-0">
                 <AnimatePresence initial={false} custom={direction} mode="wait">
                     <motion.div
                         key={page}
@@ -137,31 +137,31 @@ export default function AppWelcomePage() {
                                 paginate(-1);
                             }
                         }}
-                        className="w-full flex flex-col items-center text-center cursor-grab active:cursor-grabbing"
+                        className="w-full flex-1 flex flex-col items-center justify-center text-center cursor-grab active:cursor-grabbing min-h-0"
                     >
                         {/* Heading */}
-                        <h1 className="text-[2.2rem] leading-[1.1] font-semibold text-gray-900 mb-4 font-newyork tracking-normal min-h-[5rem] text-center whitespace-pre-line pointer-events-none">
-                            {slides[currentSlide].title}
+                        <h1 className="text-[2rem] sm:text-[2.2rem] leading-[1.1] font-semibold text-gray-900 mb-2 sm:mb-4 font-newyork tracking-normal min-h-[4.5rem] sm:min-h-[5rem] text-center whitespace-pre-line pointer-events-none shrink-0 flex items-center justify-center">
+                            <div>{slides[currentSlide].title}</div>
                         </h1>
 
                         {/* Description */}
-                        <p className="text-gray-800 text-[1.05rem] leading-snug font-medium mb-10 max-w-[320px] whitespace-pre-line opacity-90 pointer-events-none">
+                        <p className="text-gray-800 text-[0.95rem] sm:text-[1.05rem] leading-snug font-medium mb-4 sm:mb-8 max-w-[320px] whitespace-pre-line opacity-90 pointer-events-none shrink-0">
                             {slides[currentSlide].description}
                         </p>
 
-                        {/* Image Container */}
+                        {/* flex-1 Image Container to soak up remaining height perfectly */}
                         <motion.div 
                             initial={{ y: 0 }}
                             animate={{ y: [0, -8, 0] }}
                             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                            className="relative w-full aspect-square max-w-[300px] flex items-center justify-center -mt-4 pointer-events-none"
+                            className="relative flex-1 w-full max-w-[320px] sm:max-w-[380px] pointer-events-none pb-4 sm:pb-0 min-h-0"
                         >
                             <Image
                                 src={slides[currentSlide].image}
                                 alt="Onboarding illustration"
-                                width={380}
-                                height={380}
-                                className="object-contain"
+                                fill
+                                sizes="(max-width: 600px) 100vw, 380px"
+                                className="object-contain object-bottom sm:object-center"
                                 priority
                             />
                         </motion.div>
@@ -170,7 +170,7 @@ export default function AppWelcomePage() {
             </div>
 
             {/* Bottom Bar */}
-            <div className="p-8 pb-20 flex flex-col items-center gap-8">
+            <div className="p-6 pb-12 pt-0 sm:p-8 sm:pb-20 flex flex-col items-center gap-6 sm:gap-8 shrink-0 relative z-20">
                 {/* Progress Indicators */}
                 <div className="flex gap-2">
                     {slides.map((_, index) => (
