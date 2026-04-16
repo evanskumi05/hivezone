@@ -93,9 +93,17 @@ export default function NotificationProvider({ children }) {
 
             if (!session) return;
 
+            // CLEANUP: Ensure no stale channel exists before re-subscribing to avoid "callback after subscribe" errors
+            supabase.getChannels().forEach(ch => {
+                if (ch.name === `notifications-${session.user.id}`) {
+                    supabase.removeChannel(ch);
+                }
+            });
+
             // Subscribe with user-scoped filter so only this user's notifications fire
-            channel = supabase
-                .channel(`notifications-${session.user.id}`)
+            channel = supabase.channel(`notifications-${session.user.id}`);
+            
+            channel
                 .on(
                     'postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` },

@@ -159,22 +159,28 @@ const Navbar = () => {
     const handleLogoClick = (e) => {
         e.preventDefault();
         
-        // Check for our custom scroll containers used in Dashboard/Search/Profile
+        // IF ON DASHBOARD: Use central event to clear memory and scrollers
+        if (pathname === '/dashboard') {
+            window.dispatchEvent(new CustomEvent('HZ_NAV_LOGO_CLICK'));
+            return;
+        }
+
+        // Check for our custom scroll containers used in Search/Profile
         const dashboardContainer = document.getElementById('dashboard-scroll-container');
         if (dashboardContainer && dashboardContainer.scrollTop > 0) {
-            dashboardContainer.scrollTo({ top: 0, behavior: 'smooth' });
+            dashboardContainer.scrollTo({ top: 0, behavior: 'auto' });
             return;
         }
 
         const mainContainer = document.getElementById('main-scroll-area');
         if (mainContainer && mainContainer.scrollTop > 0) {
-            mainContainer.scrollTo({ top: 0, behavior: 'smooth' });
+            mainContainer.scrollTo({ top: 0, behavior: 'auto' });
             return;
         }
 
         // Check standard window scroll last
         if (window.scrollY > 0) {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo({ top: 0, behavior: 'auto' });
             return;
         }
 

@@ -18,6 +18,10 @@ import { useUI } from "@/components/ui/UIProvider";
 import Linkify from "@/components/ui/Linkify";
 import { feedImageUrl, fullImageUrl } from "@/utils/optimizeImage";
 
+// Global Session Cache for Post Images
+// Prevents flickering when scrolling back to already-loaded content
+const POST_IMAGE_CACHE = new Set();
+
 export default React.memo(function FeedPostCard({
     post,
     profile,
@@ -29,6 +33,16 @@ export default React.memo(function FeedPostCard({
     const { showImage } = useUI();
     const menuRef = useRef(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    
+    // Synchronous Cache Check: If seen before, don't show the shimmer
+    const imageUrl = post.media_url ? feedImageUrl(post.media_url) : null;
+    const isCached = imageUrl ? POST_IMAGE_CACHE.has(imageUrl) : false;
+    const [imageLoaded, setImageLoaded] = useState(isCached);
+
+    // Ensure state stays in sync if post data changes (rare but possible)
+    useEffect(() => {
+        if (isCached) setImageLoaded(true);
+    }, [isCached]);
 
     useEffect(() => {
         if (!isMenuOpen) return;
@@ -141,8 +155,12 @@ export default React.memo(function FeedPostCard({
                 </Link>
 
                 {post.media_url && (
-                    <div className="relative w-full aspect-[4/5] rounded-[1.5rem] overflow-hidden mt-3 bg-gray-50 border border-gray-100 shadow-inner group/img">
-                        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 animate-pulse" />
+                    <div className="relative w-full aspect-[4/5] rounded-[1.5rem] overflow-hidden mt-3 bg-gray-100 border border-gray-100 shadow-inner group/img">
+                        {/* Shimmer Placeholder - Skip entirely for cached images */}
+                        {!imageLoaded && (
+                            <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse" />
+                        )}
+                        
                         {post.media_url.match(/\.(mp4|webm|ogg|mov|m4v|3gp|mkv)$/i) ? (
                             <AutoPauseVideo
                                 src={post.media_url}
@@ -151,14 +169,20 @@ export default React.memo(function FeedPostCard({
                             />
                         ) : (
                             <img
-                                src={feedImageUrl(post.media_url)}
+                                src={imageUrl}
                                 alt="Post media"
-                                loading="lazy"
+                                loading={isCached ? "eager" : "lazy"}
+                                fetchPriority={isCached ? "high" : "auto"}
+                                decoding={isCached ? "sync" : "async"}
+                                onLoad={() => {
+                                    setImageLoaded(true);
+                                    if (imageUrl) POST_IMAGE_CACHE.add(imageUrl);
+                                }}
                                 onClick={(e) => { e.stopPropagation(); showImage(fullImageUrl(post.media_url)); }}
                                 onError={(e) => {
                                     if (e.target.src !== post.media_url) e.target.src = post.media_url;
                                 }}
-                                className="relative z-10 w-full h-full object-cover group-hover/img:scale-[1.03] transition-transform duration-500"
+                                className={`relative z-10 w-full h-full object-cover cursor-zoom-in group-hover/img:scale-[1.03] ${isCached ? '' : 'transition-opacity duration-300'} ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                             />
                         )}
                     </div>

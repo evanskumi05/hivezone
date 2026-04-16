@@ -20,7 +20,10 @@ const queryClient = new QueryClient({
 });
 
 // Granular Calibration
-queryClient.setQueryDefaults(['FEED_STREAM'], { staleTime: 1000 * 60 * 15 }); // 15 mins
+queryClient.setQueryDefaults(['FEED_STREAM'], { 
+    staleTime: 1000 * 60 * 15, 
+    gcTime: 1000 * 60 * 60 // 1 Hour (RAM survival during session)
+});
 queryClient.setQueryDefaults(['NOTIFICATIONS'], { staleTime: 1000 * 10 });    // 10 secs
 queryClient.setQueryDefaults(['CONVERSATIONS'], { staleTime: 1000 * 5 });     // 5 secs
 queryClient.setQueryDefaults(['USER_PROFILE'], { staleTime: 1000 * 60 * 5 });  // 5 mins

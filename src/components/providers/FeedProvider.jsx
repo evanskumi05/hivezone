@@ -22,24 +22,22 @@ export const FeedProvider = ({ children }) => {
     // UI Persistence State
     const [activeTab, setActiveTab] = useState('all');
     
-    // Identity State
-    const [pageProfile, setPageProfileState] = useState(null);
-    const [hasMounted, setHasMounted] = useState(false);
+    // Identity State: Synchronous Hydration from Disk
+    // This removes the 'blank-frame' on first render so that the Feed Query is enabled instantly.
+    const [pageProfile, setPageProfileState] = useState(() => getProfileFromDisk());
 
-    // Securely hydrate profile from disk on mount
+    // Background Validation: Verify cache against current server session
     React.useEffect(() => {
-        setHasMounted(true);
-        const stored = getProfileFromDisk();
+        const stored = getProfileFromDisk(); // Get fresh copy for validation
         if (stored) {
-            // Lazy load supabase to keep initial bundle light
             import('@/utils/supabase/client').then(({ createClient }) => {
                 const supabase = createClient();
                 supabase.auth.getSession().then(({ data: { session } }) => {
-                    if (session?.user?.id && stored.id === session.user.id) {
-                        setPageProfileState(stored);
-                    } else {
-                        // Mismatch or no session — clear stale disk cache
+                    // Critical security & data-integrity check
+                    if (!session?.user?.id || stored.id !== session.user.id || !stored.school_id) {
+                        // mismatch, stale data, or no session — clear disk cache
                         localStorage.removeItem('HIVEZONE_USER_IDENTITY');
+                        setPageProfileState(null);
                     }
                 });
             });
@@ -53,9 +51,9 @@ export const FeedProvider = ({ children }) => {
 
     const contextValue = useMemo(() => ({
         activeTab, setActiveTab,
-        pageProfile: hasMounted ? pageProfile : null,
+        pageProfile,
         setPageProfile,
-    }), [activeTab, pageProfile, hasMounted]);
+    }), [activeTab, pageProfile]);
 
     return (
         <FeedContext.Provider value={contextValue}>

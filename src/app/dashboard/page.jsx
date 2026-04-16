@@ -21,7 +21,7 @@ export default function DashboardPage() {
 
     // High-performance cached profile fetch
     const { data: profile } = useQuery({
-        queryKey: ['USER_IDENTITY_V4'],
+        queryKey: ['USER_PROFILE'],
         queryFn: async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) { router.push("/auth/signin"); return null; }
@@ -33,11 +33,13 @@ export default function DashboardPage() {
                 .single();
             
             if (profileData) {
+                // If we have an institution but no school_id, we might need to sync it
+                // (This is a safety check for automatic identification)
                 setPageProfile(profileData);
             }
             return profileData;
         },
-        staleTime: 1000 * 60 * 60 * 24, 
+        staleTime: 1000 * 60 * 5, // 5 minutes (Ensures fast propagation of profile updates)
     });
 
     const handleRefresh = async () => {

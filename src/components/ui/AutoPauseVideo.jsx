@@ -182,6 +182,7 @@ export default React.memo(function AutoPauseVideo({ src, poster, className, onCl
                     autoPlay
                     muted={isMuted}
                     playsInline
+                    preload="metadata"
                     onTimeUpdate={handleTimeUpdate}
                     onLoadedMetadata={handleLoadedMetadata}
                     onEnded={() => { exitFullScreen(); }}

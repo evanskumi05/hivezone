@@ -1,17 +1,21 @@
 "use client";
 
-import React, { useState, useRef, useMemo, useCallback } from "react";
+import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useUI } from "@/components/ui/UIProvider";
 import { useFeed } from "@/components/providers/FeedProvider";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FeedPostSkeleton } from "@/components/ui/Skeleton";
 import Avatar from "@/components/ui/Avatar";
-import { Image01Icon, Attachment01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Image01Icon, Attachment01Icon, Cancel01Icon, BrainIcon } from "@hugeicons/core-free-icons";
 import { Virtuoso } from "react-virtuoso";
 import FeedPostCard from "@/components/FeedPostCard";
 import WelcomeBanner from "@/components/dashboard/WelcomeBanner";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { 
+    useInfiniteQuery, 
+    useQueryClient 
+} from "@tanstack/react-query";
+import { avatarUrl } from "@/utils/optimizeImage";
 import { compressForFeed } from "@/utils/compressImage";
 
 // Uncontrolled composer — typing never triggers a re-render anywhere
@@ -113,7 +117,10 @@ const PostComposer = React.memo(({ profile, onPost, isPosting }) => {
 PostComposer.displayName = "PostComposer";
 
 const FeedListHeader = React.memo(({ profile, activeTab, onTabChange, isLoading, hasNoPosts, onPost, isPosting }) => (
-    <div className="flex flex-col gap-4 w-full bg-[#fcf6de] pb-2 px-4 sm:px-0">
+    <div 
+        className="flex flex-col gap-4 w-full bg-[#fcf6de] pb-0 px-4 sm:px-0"
+        style={{ minHeight: '370px' }} // Adjusted Buffer: Matches content exactly to avoid gaps
+    >
         <div className="mb-4">
             <WelcomeBanner firstName={profile?.first_name} />
         </div>
@@ -131,7 +138,7 @@ const FeedListHeader = React.memo(({ profile, activeTab, onTabChange, isLoading,
         </div>
         <PostComposer profile={profile} onPost={onPost} isPosting={isPosting} />
         {isLoading && hasNoPosts && (
-            <div className="flex flex-col gap-4 mt-4">
+            <div className="flex flex-col gap-4 mt-2">
                 {[...Array(3)].map((_, i) => (
                     <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
                         <FeedPostSkeleton />
@@ -143,17 +150,26 @@ const FeedListHeader = React.memo(({ profile, activeTab, onTabChange, isLoading,
 ));
 FeedListHeader.displayName = "FeedListHeader";
 
-const FeedListFooter = React.memo(({ isFetchingNextPage, hasNextPage, isEmpty, isLoading, activeTab }) => (
+const FeedListFooter = React.memo(({ isFetchingNextPage, hasNextPage, isEmpty, isLoading, isSuccess, activeTab, isEnabled, profile }) => (
     <div className="flex flex-col gap-3 py-6">
         {isFetchingNextPage && <div className="flex justify-center py-4"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ffc107]"></div></div>}
-        {!hasNextPage && !isEmpty && <div className="text-center py-8 text-gray-400 font-bold text-sm">{activeTab === 'all' ? "You've reached the end of the hive." : "That's all the top trending posts right now."}</div>}
-        {isEmpty && !isLoading && (
+        {!hasNextPage && !isEmpty && isSuccess && <div className="text-center py-8 text-gray-400 font-bold text-sm">{activeTab === 'all' ? "You've reached the end of the hive." : "That's all the top trending posts right now."}</div>}
+        {isEmpty && isSuccess && isEnabled && (
             <div className="flex flex-col items-center justify-center py-20 text-center opacity-30 px-6">
                 <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center mb-6 shadow-sm">
                     <HugeiconsIcon icon={Image01Icon} className="w-8 h-8 text-gray-400" />
                 </div>
                 <h3 className="text-xl font-black font-newyork text-gray-900">The hive is quiet</h3>
                 <p className="text-gray-500 font-bold mt-1 max-w-[200px]">{activeTab === 'all' ? "Start the conversation by posting what's happening!" : "No trending posts yet."}</p>
+            </div>
+        )}
+        {(!isEnabled || !profile?.school_id) && (
+            <div className="flex flex-col items-center justify-center py-20 text-center opacity-30 px-6 animate-pulse">
+                <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center mb-6 shadow-sm">
+                    <HugeiconsIcon icon={BrainIcon} className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-black font-newyork text-gray-900">Synchronizing Hive...</h3>
+                <p className="text-gray-500 font-bold mt-1 max-w-[200px]">We're identifying your institution to show you the latest buzz.</p>
             </div>
         )}
         <div className="h-20 w-full" />
@@ -175,6 +191,24 @@ const VirtuosoFooter = React.forwardRef(({ context }, ref) => (
 ));
 VirtuosoFooter.displayName = "VirtuosoFooter";
 
+// HIGH-PERFORMANCE: Scroll Seek Placeholder
+// Designed to keep visual rhythm at high scroll speeds (> 500px/s)
+const ScrollSeekPlaceholder = React.memo(() => (
+    <div className="bg-[#fcf6de] border-b border-gray-200/60 p-4 sm:p-6 flex gap-4 h-[300px] animate-pulse">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 rounded-full shrink-0" />
+        <div className="flex-1 flex flex-col gap-4">
+            <div className="flex gap-2">
+                <div className="h-4 bg-gray-200 rounded w-24" />
+                <div className="h-4 bg-gray-200 rounded w-16 opacity-50" />
+            </div>
+            <div className="h-4 bg-gray-200 rounded w-full" />
+            <div className="h-4 bg-gray-200 rounded w-3/4" />
+            <div className="w-full aspect-[4/5] bg-gray-200 rounded-[1.5rem] mt-2" />
+        </div>
+    </div>
+));
+ScrollSeekPlaceholder.displayName = "ScrollSeekPlaceholder";
+
 const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
     const { showToast, confirmAction, openReportModal } = useUI();
     const queryClient = useQueryClient();
@@ -184,9 +218,20 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
     const supabase = useRef(createClient()).current;
     const virtuosoRef = useRef(null);
     const limit = 15;
+    
+    // UI State: Restoration Lock
+    const [readyToTrack, setReadyToTrack] = useState(false);
+    const isProfileHydrated = !!profile?.school_id;
 
-    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, refetch } = useInfiniteQuery({
+    // GOD-TIER PERF: Synchronous Cache Peeking
+    // This bypasses the async IndexedDB hydration and pulls data directly from RAM.
+    const initialFeedCache = useMemo(() => {
+        return queryClient.getQueryData(['FEED_STREAM', activeTab, profile?.school_id]);
+    }, [queryClient, activeTab, profile?.school_id]);
+
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isSuccess, refetch } = useInfiniteQuery({
         queryKey: ['FEED_STREAM', activeTab, profile?.school_id],
+        initialData: initialFeedCache, // High-Speed: Use memory cache if available for 0ms mount
         queryFn: async ({ pageParam = 0 }) => {
             const sid = profile?.school_id;
             const uid = profile?.id;
@@ -224,6 +269,7 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
             return (fd || []).map(p => ({ ...p, is_liked: likedSet.has(p.id) }));
         },
         getNextPageParam: (lastPage, allPages) => lastPage.length === limit ? allPages.length : undefined,
+        maxPages: 14, // Lifecycle Management: Maintain ~210 posts in memory max
         staleTime: 1000 * 60 * 5,
         enabled: !!profile?.school_id,
     });
@@ -231,12 +277,118 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
     const allPosts = useMemo(() => data?.pages.flat() || [], [data]);
 
     React.useImperativeHandle(ref, () => ({
-        refresh: async () => { await refetch(); virtuosoRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }
+        refresh: async () => { await refetch(); virtuosoRef.current?.scrollTo({ top: 0, behavior: 'auto' }); }
     }));
 
     const handleTabChange = useCallback((tab) => {
         if (tab !== activeTab) { setActiveTab(tab); virtuosoRef.current?.scrollTo({ top: 0, behavior: 'auto' }); }
     }, [activeTab, setActiveTab]);
+
+    // --- SCROLL PERSISTENCE LOGIC ---
+    const scrollStoreKey = useMemo(() => `HZ_FEED_SCROLL_${activeTab}_${profile?.school_id}`, [activeTab, profile?.school_id]);
+    const isRestoringRef = useRef(false);
+
+    // Initial Position Calculation (Synchronous for Frame 1)
+    const initialPosition = useMemo(() => {
+        if (typeof window === 'undefined' || !isProfileHydrated) return { index: 0, offset: 0 };
+        const saved = sessionStorage.getItem(scrollStoreKey);
+        if (!saved) return { index: 0, offset: 0 };
+        const { postId, offset, timestamp, index: hintIndex } = JSON.parse(saved);
+        if (Date.now() - timestamp > 300000) return { index: 0, offset: 0 };
+        
+        if (postId === 'HIVE_TOP') return { index: 0, offset };
+        
+        // GOD-TIER PERF: Use the 'Index Hint' for Frame 1 before the full list has mapped.
+        // This kills the 'flicker-from-top' entirely.
+        const foundIndex = allPosts.findIndex(p => p.id === postId);
+        const targetIndex = foundIndex === -1 ? (hintIndex || 0) : foundIndex;
+        
+        return { index: targetIndex, offset };
+    }, [allPosts, scrollStoreKey, isProfileHydrated]);
+
+    useEffect(() => {
+        // Unlock tracking after a long enough delay (1.5s) to ensure restoration is absolutely settled.
+        // This prevents the 'Mount-at-0' event from ever corrupting the saved position.
+        const timer = setTimeout(() => { setReadyToTrack(true); }, 1500);
+        return () => clearTimeout(timer);
+    }, [activeTab]);
+
+    // Track position as user scrolls
+    const handleRangeChanged = useCallback((range) => {
+        if (!readyToTrack || isRestoringRef.current || allPosts.length === 0) return;
+        
+        // DEBOUNCED PERSISTENCE: offload storage writes to prevent dropped frames
+        const scroller = document.getElementById('dashboard-scroll-container');
+        const st = scroller?.scrollTop || 0;
+        const startIndex = range.startIndex;
+
+        // Perform write only when actually moved to save I/O
+        const topItem = (startIndex === 0) ? { id: 'HIVE_TOP' } : allPosts[startIndex];
+
+        if (topItem) {
+            // Use requestIdleCallback if available, or a 0ms timeout to defer
+            const scheduler = window.requestIdleCallback || ((cb) => setTimeout(cb, 50));
+            scheduler(() => {
+                sessionStorage.setItem(scrollStoreKey, JSON.stringify({
+                    postId: topItem.id,
+                    index: startIndex,
+                    offset: st,
+                    timestamp: Date.now()
+                }));
+            });
+        }
+    }, [allPosts, scrollStoreKey, readyToTrack]);
+
+    useEffect(() => {
+        if (isSuccess && isProfileHydrated && initialPosition.offset > 0 && !isRestoringRef.current) {
+            isRestoringRef.current = true;
+            // Native Virtuoso doesn't always handle 'scrollTop' on mount correctly if indices shift
+            // So we perform a secondary precision pixel-scroll if we are index 0 (header)
+            if (initialPosition.index === 0) {
+                setTimeout(() => {
+                    virtuosoRef.current?.scrollTo({ top: initialPosition.offset });
+                    setTimeout(() => { isRestoringRef.current = false; }, 100);
+                }, 100);
+            }
+        }
+    }, [isSuccess, isProfileHydrated, initialPosition]);
+
+    // --- COMMUNICATION BRIDGE: Logo Click -> Scroll to Top ---
+    // This resolves the 'Glitch' where the feed fights against manual scrolling.
+    useEffect(() => {
+        const handleLogoScroll = () => {
+            if (!virtuosoRef.current) return;
+            
+            // 1. Wipe the memory: Forget the old position entirely
+            sessionStorage.removeItem(scrollStoreKey);
+            
+            // 2. Lock the tracker: Prevent 'Mount-at-0' event from saving while we scroll
+            setReadyToTrack(false);
+            
+            // 3. Jump: Move the actual scroller to the summit instantly
+            virtuosoRef.current.scrollTo({ top: 0, behavior: 'auto' });
+            
+            // 4. Re-enable: Allow tracking again immediately after the jump
+            setTimeout(() => setReadyToTrack(true), 100);
+        };
+
+        window.addEventListener('HZ_NAV_LOGO_CLICK', handleLogoScroll);
+        return () => window.removeEventListener('HZ_NAV_LOGO_CLICK', handleLogoScroll);
+    }, [scrollStoreKey]);
+
+    // BACKGROUND PRE-WARMING: Warm up author avatars for the top posts
+    // This cuts Time-to-Visibility significantly during scroll events.
+    useEffect(() => {
+        if (isSuccess && allPosts.length > 0) {
+            const topAuthors = allPosts.slice(0, 15);
+            topAuthors.forEach(post => {
+                if (post.author?.profile_picture) {
+                    const img = new Image();
+                    img.src = avatarUrl(post.author.profile_picture);
+                }
+            });
+        }
+    }, [isSuccess, allPosts]);
 
     // Receives content + media from PostComposer refs, plus a reset callback
     const handlePost = useCallback(async (content, mediaFile, thumbnailBlob, resetComposer) => {
@@ -391,28 +543,40 @@ const MainFeed = React.forwardRef(({ pageProfile: bannerProfile }, ref) => {
         activeTab,
         onTabChange: handleTabChange,
         isLoading,
+        isSuccess,
+        isEnabled: !!profile?.school_id,
         hasNoPosts: allPosts.length === 0,
         onPost: handlePost,
         isPosting,
         isFetchingNextPage,
         hasNextPage,
         isEmpty: allPosts.length === 0
-    }), [profile, activeTab, handleTabChange, isLoading, allPosts.length, handlePost, isPosting, isFetchingNextPage, hasNextPage]);
+    }), [profile, activeTab, handleTabChange, isLoading, isSuccess, allPosts.length, handlePost, isPosting, isFetchingNextPage, hasNextPage]);
 
     return (
         <div className="flex flex-col w-full flex-1 min-h-0 h-full">
             <Virtuoso
                 ref={virtuosoRef}
                 scrollerRef={(el) => { if (el) el.id = 'dashboard-scroll-container'; }}
+                initialTopMostItemIndex={initialPosition.index}
                 data={allPosts}
                 computeItemKey={(index, item) => item.id}
-                overscan={600} // Optimized for mobile
-                increaseViewportBy={{ top: 600, bottom: 600 }} 
+                overscan={8} 
+                increaseViewportBy={{ top: 2000, bottom: 2000 }} 
                 atBottomThreshold={600} 
                 endReached={() => { if (hasNextPage && !isFetchingNextPage) fetchNextPage(); }}
+                rangeChanged={handleRangeChanged}
                 className="scrollbar-hide overscroll-contain"
                 context={virtuosoContext}
-                components={{ Header: VirtuosoHeader, Footer: VirtuosoFooter }}
+                scrollSeekConfiguration={{
+                    enter: (v) => Math.abs(v) > 4000,
+                    exit: (v) => Math.abs(v) < 300,
+                }}
+                components={{ 
+                    Header: VirtuosoHeader, 
+                    Footer: VirtuosoFooter,
+                    ScrollSeekPlaceholder 
+                }}
                 itemContent={(idx, post) => (
                     <div 
                         className="pb-0 px-0"

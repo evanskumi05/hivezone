@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 
 const Navbar = () => {
@@ -24,10 +25,18 @@ const Navbar = () => {
         return () => window.removeEventListener("scroll", handleScroll);
     }, [supabase]);
 
+    const pathname = usePathname();
+
     const scrollToTop = (e) => {
         if (isScrolled) {
             e.preventDefault();
-            window.scrollTo({ top: 0, behavior: "smooth" });
+            
+            // IF ON DASHBOARD: Use custom event to resolve the 'Glitch' conflict
+            if (pathname === '/dashboard') {
+                window.dispatchEvent(new CustomEvent('HZ_NAV_LOGO_CLICK'));
+            } else {
+                window.scrollTo({ top: 0, behavior: "auto" });
+            }
         }
     };
 

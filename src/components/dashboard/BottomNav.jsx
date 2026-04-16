@@ -56,25 +56,31 @@ const BottomNav = () => {
         e.preventDefault();
         
         if (tab.isActive) {
+            // SPECIAL CASE: Home Feed requires memory reset to prevent glitches
+            if (tab.href === '/dashboard' && pathname === '/dashboard') {
+                window.dispatchEvent(new CustomEvent('HZ_NAV_LOGO_CLICK'));
+                return;
+            }
+
             let scrolled = false;
 
             // 1. Check Virtual feed scrollers (Home feed uses this)
             const virtuosoScroller = document.getElementById('dashboard-scroll-container');
             if (virtuosoScroller && virtuosoScroller.scrollTop > 0) {
-                virtuosoScroller.scrollTo({ top: 0, behavior: 'smooth' });
+                virtuosoScroller.scrollTo({ top: 0, behavior: 'auto' });
                 scrolled = true;
             }
             
             // 2. Check Global Layout Scroller (Gigs, Search, Messages use this)
             const mainScroller = document.getElementById('main-scroll-area');
             if (mainScroller && mainScroller.scrollTop > 0) {
-                mainScroller.scrollTo({ top: 0, behavior: 'smooth' });
+                mainScroller.scrollTo({ top: 0, behavior: 'auto' });
                 scrolled = true;
             }
             
             // 3. Standard window scroll fallback
             if (!scrolled && window.scrollY > 0) {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo({ top: 0, behavior: 'auto' });
             }
         } else {
             router.push(tab.href);
