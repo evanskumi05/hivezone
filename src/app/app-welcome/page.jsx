@@ -170,7 +170,7 @@ export default function AppWelcomePage() {
             </div>
 
             {/* Bottom Bar */}
-            <div className="p-8 pb-10 flex flex-col items-center gap-8">
+            <div className="p-8 pb-20 flex flex-col items-center gap-8">
                 {/* Progress Indicators */}
                 <div className="flex gap-2">
                     {slides.map((_, index) => (

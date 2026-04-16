@@ -2,13 +2,17 @@
 
 import React from 'react';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 
 const Footer = () => {
     const currentYear = new Date().getFullYear();
+    const pathname = usePathname();
 
-    // Hide footer on mobile app (Capacitor) specifically for auth pages
-    const isCapacitor = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
-    const isAuthPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth');
+    const isCapacitor = typeof window !== 'undefined' && (
+        (window.Capacitor && window.Capacitor.isNativePlatform()) ||
+        window.navigator.userAgent.includes('CapacitorApp')
+    );
+    const isAuthPage = pathname?.startsWith('/auth');
 
     if (isCapacitor && isAuthPage) return null;
 
